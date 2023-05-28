@@ -59,7 +59,7 @@ def split_data(test_fraction: float, folds: int) -> Tuple[List[Tuple[List[int], 
     # windows = [*range(len(date_range) - input_window_size - output_window_size + 1)]
     test_windows = [*range(floor(test_fraction * len(date_range)) + 1, len(date_range) + 2 - INPUT_SIZE - OUTPUT_SIZE)]
     fold_windows = np.array_split([*range(0, floor(test_fraction * len(date_range)) + 1)], folds)[:][:- INPUT_SIZE - OUTPUT_SIZE + 1]
-    return [(np.concatenate(fold_windows[0:i])+np.concatenate(fold_windows[i+1:]), fold_windows[i]) for i in range(folds)], test_windows
+    return [(np.concatenate(fold_windows[0:i]+[[]])+np.concatenate(fold_windows[i+1:]+[[]]), fold_windows[i]) for i in range(folds)], test_windows
 
 
 # Generators for model input and expected output
