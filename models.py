@@ -54,9 +54,12 @@ def split_data(test_fraction: float, folds: int) -> Tuple[List[Tuple[List[int], 
     
     # windows = [*range(len(date_range) - input_window_size - output_window_size + 1)]
     test_windows = np.array([*range(floor((1 - test_fraction) * len(date_range)) + 1, len(date_range) + 2 - INPUT_SIZE - OUTPUT_SIZE)])
-    fold_windows = np.array([np.asarray(fold)[:- INPUT_SIZE - OUTPUT_SIZE + 1] for fold in np.array_split([*range(1, floor((1 - test_fraction) * len(date_range)) + 1)], folds)])
-    fold_indices = list(range(folds))
-    return [(np.concatenate(fold_windows[[fold for fold in fold_indices if fold != i]]), fold_windows[i]) for i in fold_indices], test_windows
+    if folds == 1:
+        return [([*range(1, floor((1 - test_fraction) * len(date_range)) + 2 - INPUT_SIZE - OUTPUT_SIZE)], [])], test_windows
+    else:
+        fold_windows = np.array([np.asarray(fold)[:- INPUT_SIZE - OUTPUT_SIZE + 1] for fold in np.array_split([*range(1, floor((1 - test_fraction) * len(date_range)) + 1)], folds)])
+        fold_indices = list(range(folds))
+        return [(np.concatenate(fold_windows[[fold for fold in fold_indices if fold != i]]), fold_windows[i]) for i in fold_indices], test_windows
 
 
 # Generators for model input and expected output
