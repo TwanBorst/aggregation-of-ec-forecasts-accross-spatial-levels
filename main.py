@@ -41,18 +41,19 @@ if __name__ == '__main__':
                 history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
                                                     args=(SAVE_DIR, household, sensor, train_windows),
-                                                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                                                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
                     y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
                                                     args=(SAVE_DIR, household, sensor, train_windows),
-                                                    output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                                                    output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
                     validation_data=(
                         tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
                                                     args=(SAVE_DIR, household, sensor, val_windows),
-                                                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                                                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
                         tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
                                                     args=(SAVE_DIR, household, sensor, val_windows),
-                                                    output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True)
+                                                    output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True)
                     ),
+                    epochs=100,
                     use_multiprocessing=True,
                     callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
                 )
@@ -61,10 +62,11 @@ if __name__ == '__main__':
             history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
                                                     args=(SAVE_DIR, household, sensor, full_train_windows),
-                                                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                                                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
                     y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
                                                     args=(SAVE_DIR, household, sensor, full_train_windows),
-                                                    output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                                                    output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+                    epochs=100,
                     use_multiprocessing=True,
                     callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
                 )
@@ -77,141 +79,147 @@ if __name__ == '__main__':
 
 
 
-    # Apply KFold cross-validation to households and train final models
-    for household in data_utils.get_households(CUSTOM_METADATA):
-        path = SAVE_DIR + f"models/households/household={household}/"
-        for fold in range(FOLDS):
-            train_windows = train_val_windows[fold][0]
-            val_windows = train_val_windows[fold][1]
-            model = models.get_model()
-            history = model.fit(
-                x=tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
-                                                args=(SAVE_DIR, household, train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
-                                                args=(SAVE_DIR, household, train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                validation_data=(
-                    tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
-                                                args=(SAVE_DIR, household, val_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                    tf.data.Dataset.from_generator(generator=models.get_household_ec_output,
-                                                args=(SAVE_DIR, household, val_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True)
-                ),
-                use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
-            )
+    # # Apply KFold cross-validation to households and train final models
+    # for household in data_utils.get_households(CUSTOM_METADATA):
+    #     path = SAVE_DIR + f"models/households/household={household}/"
+    #     for fold in range(FOLDS):
+    #         train_windows = train_val_windows[fold][0]
+    #         val_windows = train_val_windows[fold][1]
+    #         model = models.get_model()
+    #         history = model.fit(
+    #             x=tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
+    #                                             args=(SAVE_DIR, household, train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
+    #                                             args=(SAVE_DIR, household, train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             validation_data=(
+    #                 tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
+    #                                             args=(SAVE_DIR, household, val_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #                 tf.data.Dataset.from_generator(generator=models.get_household_ec_output,
+    #                                             args=(SAVE_DIR, household, val_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True)
+    #             ),
+    #             epochs=100,
+    #             use_multiprocessing=True,
+    #             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+    #         )
         
-        model = models.get_model()
-        history = model.fit(
-                x=tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
-                                                args=(SAVE_DIR, household, full_train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                y=tf.data.Dataset.from_generator(generator=models.get_household_ec_output,
-                                                args=(SAVE_DIR, household, full_train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
-            )
-        model.save(filepath=path+"model/", overwrite=True)
+    #     model = models.get_model()
+    #     history = model.fit(
+    #             x=tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
+    #                                             args=(SAVE_DIR, household, full_train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             y=tf.data.Dataset.from_generator(generator=models.get_household_ec_output,
+    #                                             args=(SAVE_DIR, household, full_train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             epochs=100,
+    #             use_multiprocessing=True,
+    #             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+    #         )
+    #     model.save(filepath=path+"model/", overwrite=True)
         
-    # Make household predictions and aggregate them to all levels above while recording predictions and metrics
-    house_agg_layer = models.HouseholdAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
-    house_agg_layer.from_disk()
-    house_agg_layer.evaluate(test_windows=test_windows)
+    # # Make household predictions and aggregate them to all levels above while recording predictions and metrics
+    # house_agg_layer = models.HouseholdAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    # house_agg_layer.from_disk()
+    # house_agg_layer.evaluate(test_windows=test_windows)
 
 
 
-    # Apply KFold cross-validation to communities and train final models
-    for community in data_utils.get_communities(CUSTOM_METADATA):
-        path = SAVE_DIR + f"models/communities/community={community}/"
-        for fold in range(FOLDS):
-            train_windows = train_val_windows[fold][0]
-            val_windows = train_val_windows[fold][1]
-            model = models.get_model()
-            history = model.fit(
-                x=tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
-                                                args=(SAVE_DIR, community, train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
-                                                args=(SAVE_DIR, community, train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                validation_data=(
-                    tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
-                                                args=(SAVE_DIR, community, val_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                    tf.data.Dataset.from_generator(generator=models.get_community_ec_output,
-                                                args=(SAVE_DIR, community, val_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True)
-                ),
-                use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
-            )
+    # # Apply KFold cross-validation to communities and train final models
+    # for community in data_utils.get_communities(CUSTOM_METADATA):
+    #     path = SAVE_DIR + f"models/communities/community={community}/"
+    #     for fold in range(FOLDS):
+    #         train_windows = train_val_windows[fold][0]
+    #         val_windows = train_val_windows[fold][1]
+    #         model = models.get_model()
+    #         history = model.fit(
+    #             x=tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
+    #                                             args=(SAVE_DIR, community, train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
+    #                                             args=(SAVE_DIR, community, train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             validation_data=(
+    #                 tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
+    #                                             args=(SAVE_DIR, community, val_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #                 tf.data.Dataset.from_generator(generator=models.get_community_ec_output,
+    #                                             args=(SAVE_DIR, community, val_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True)
+    #             ),
+    #             epochs=100,
+    #             use_multiprocessing=True,
+    #             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+    #         )
         
-        model = models.get_model()
-        history = model.fit(
-                x=tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
-                                                args=(SAVE_DIR, community, full_train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                y=tf.data.Dataset.from_generator(generator=models.get_community_ec_output,
-                                                args=(SAVE_DIR, community, full_train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
-            )
-        model.save(filepath=path+"model/", overwrite=True)
+    #     model = models.get_model()
+    #     history = model.fit(
+    #             x=tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
+    #                                             args=(SAVE_DIR, community, full_train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             y=tf.data.Dataset.from_generator(generator=models.get_community_ec_output,
+    #                                             args=(SAVE_DIR, community, full_train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             epochs=100,
+    #             use_multiprocessing=True,
+    #             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+    #         )
+    #     model.save(filepath=path+"model/", overwrite=True)
     
-    # Make community predictions and aggregate them to all levels above while recording predictions and metrics
-    comm_agg_layer = models.CommunityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
-    comm_agg_layer.from_disk()
-    comm_agg_layer.evaluate(test_windows=test_windows)
+    # # Make community predictions and aggregate them to all levels above while recording predictions and metrics
+    # comm_agg_layer = models.CommunityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    # comm_agg_layer.from_disk()
+    # comm_agg_layer.evaluate(test_windows=test_windows)
     
     
     
-    # Apply KFold cross-validation to cities and train final models
-    for city in data_utils.get_cities(CUSTOM_METADATA):
-        path = SAVE_DIR + f"models/cities/city={city}/"
-        for fold in range(FOLDS):
-            train_windows = train_val_windows[fold][0]
-            val_windows = train_val_windows[fold][1]
-            model = models.get_model()
-            history = model.fit(
-                x=tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
-                                                args=(SAVE_DIR, city, train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
-                                                args=(SAVE_DIR, city, train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                validation_data=(
-                    tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
-                                                args=(SAVE_DIR, city, val_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                    tf.data.Dataset.from_generator(generator=models.get_city_ec_output,
-                                                args=(SAVE_DIR, city, val_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True)
-                ),
-                use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
-            )
+    # # Apply KFold cross-validation to cities and train final models
+    # for city in data_utils.get_cities(CUSTOM_METADATA):
+    #     path = SAVE_DIR + f"models/cities/city={city}/"
+    #     for fold in range(FOLDS):
+    #         train_windows = train_val_windows[fold][0]
+    #         val_windows = train_val_windows[fold][1]
+    #         model = models.get_model()
+    #         history = model.fit(
+    #             x=tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
+    #                                             args=(SAVE_DIR, city, train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             y=tf.data.Dataset.from_generator(generator=models.get_appliance_ec_output,
+    #                                             args=(SAVE_DIR, city, train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             validation_data=(
+    #                 tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
+    #                                             args=(SAVE_DIR, city, val_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #                 tf.data.Dataset.from_generator(generator=models.get_city_ec_output,
+    #                                             args=(SAVE_DIR, city, val_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True)
+    #             ),
+    #             epochs=100,
+    #             use_multiprocessing=True,
+    #             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+    #         )
         
-        model = models.get_model()
-        history = model.fit(
-                x=tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
-                                                args=(SAVE_DIR, city, full_train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                y=tf.data.Dataset.from_generator(generator=models.get_city_ec_output,
-                                                args=(SAVE_DIR, city, full_train_windows),
-                                                output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
-                use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
-            )
-        model.save(filepath=path+"model/", overwrite=True)
+    #     model = models.get_model()
+    #     history = model.fit(
+    #             x=tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
+    #                                             args=(SAVE_DIR, city, full_train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             y=tf.data.Dataset.from_generator(generator=models.get_city_ec_output,
+    #                                             args=(SAVE_DIR, city, full_train_windows),
+    #                                             output_signature=tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32)).batch(batch_size=1, drop_remaining=True),
+    #             epochs=100,
+    #             use_multiprocessing=True,
+    #             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+    #         )
+    #     model.save(filepath=path+"model/", overwrite=True)
     
-    # Make city predictions and aggregate them to all levels above while recording predictions and metrics
-    city_agg_layer = models.CityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
-    city_agg_layer.from_disk()
-    city_agg_layer.evaluate(test_windows=test_windows)
+    # # Make city predictions and aggregate them to all levels above while recording predictions and metrics
+    # city_agg_layer = models.CityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    # city_agg_layer.from_disk()
+    # city_agg_layer.evaluate(test_windows=test_windows)
                 
         
         

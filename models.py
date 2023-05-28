@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-from keras import layers, models, metrics, losses
+from keras import layers, models, metrics, losses, utils
 import dask.dataframe as dd
 import pandas as pd
 from constants import FEATURE_COLUMNS, INPUT_SIZE, OUTPUT_SIZE, SAVE_DIR, TIME_FREQUENCY, FROM_TIME, END_TIME
@@ -11,22 +11,18 @@ from math import floor
 
 
 def get_model():
-    inp = layers.Input((None, 672, 8, 1), ragged=True)
+    inp = layers.Input((INPUT_SIZE, 8), ragged=True)
 
-    cnn = layers.TimeDistributed(layers.Conv2D(filters=8, kernel_size=(2,1), strides=(1,1), padding='same', activation="relu"), input_shape=(None, 960, 8, 1))(inp)
-    pool = layers.TimeDistributed(layers.MaxPooling2D(pool_size=(2,2)))(cnn)
+    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(inp)
+    pool = layers.MaxPool1D(pool_size=2)(cnn)
 
-    cnn_2 = layers.TimeDistributed(layers.Conv2D(filters=16, kernel_size=(2,1), strides=(1,1), padding='same', activation="relu"))(pool)
-    pool_2 = layers.TimeDistributed(layers.MaxPooling2D(pool_size=(2,2)))(cnn_2)
+    cnn_2 = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation="relu")(pool)
+    pool_2 = layers.MaxPooling1D(pool_size=2)(cnn_2)
 
-    cnn_3 = layers.TimeDistributed(layers.Conv2D(filters=32, kernel_size=(2,1), strides=(1,1), padding='same', activation="relu"))(pool_2)
-    pool_3 = layers.TimeDistributed(layers.MaxPooling2D(pool_size=(2,2)))(cnn_3)
-
-    flatten = layers.TimeDistributed(layers.Flatten())(pool_3)
-
-    lstm = layers.LSTM(units=32, activation="tanh")(flatten)
-    dense = layers.Dense(units=32)(lstm)
-    out = layers.Dense(units=96)(dense)
+    lstm = layers.LSTM(units=64, activation="tanh", return_sequences=True)(pool_2)
+    lstm_2 = layers.LSTM(units=64, activation="tanh")(lstm)
+    dense = layers.Dense(units=32)(lstm_2)
+    out = layers.Dense(units=OUTPUT_SIZE)(dense)
 
     model = models.Model(inp, out)
     model.compile(loss='mae',
@@ -57,9 +53,10 @@ def split_data(test_fraction: float, folds: int) -> Tuple[List[Tuple[List[int], 
     date_range = pd.date_range(start=FROM_TIME, end=END_TIME, freq=TIME_FREQUENCY).to_frame()
     
     # windows = [*range(len(date_range) - input_window_size - output_window_size + 1)]
-    test_windows = [*range(floor(test_fraction * len(date_range)) + 1, len(date_range) + 2 - INPUT_SIZE - OUTPUT_SIZE)]
-    fold_windows = np.array_split([*range(0, floor(test_fraction * len(date_range)) + 1)], folds)[:][:- INPUT_SIZE - OUTPUT_SIZE + 1]
-    return [(np.concatenate(fold_windows[0:i]+[[]])+np.concatenate(fold_windows[i+1:]+[[]]), fold_windows[i]) for i in range(folds)], test_windows
+    test_windows = np.array([*range(floor((1 - test_fraction) * len(date_range)) + 1, len(date_range) + 2 - INPUT_SIZE - OUTPUT_SIZE)])
+    fold_windows = np.array([np.asarray(fold)[:- INPUT_SIZE - OUTPUT_SIZE + 1] for fold in np.array_split([*range(1, floor((1 - test_fraction) * len(date_range)) + 1)], folds)])
+    fold_indices = list(range(folds))
+    return [(np.concatenate(fold_windows[[fold for fold in fold_indices if fold != i]]), fold_windows[i]) for i in fold_indices], test_windows
 
 
 # Generators for model input and expected output
@@ -71,7 +68,6 @@ def get_appliance_ec_input(data_path: str, dataid: int, sensor: str, windows: Li
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][[sensor] + FEATURE_COLUMNS].values.compute()
-        np_array = np.expand_dims(np_array, axis=2)
         yield np_array
 
 def get_appliance_ec_output(data_path: str, dataid: int, sensor: str, windows: List[int]):
@@ -88,7 +84,6 @@ def get_household_ec_input(data_path: str, dataid: int, windows: List[int]):
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].values.compute()
-        np_array = np.expand_dims(np_array, axis=2)
         yield np_array
 
 def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
@@ -105,7 +100,6 @@ def get_community_ec_input(data_path: str, community: int, windows: List[int]):
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].values.compute()
-        np_array = np.expand_dims(np_array, axis=2)
         yield np_array
 
 def get_community_ec_output(data_path: str, community: int, windows: List[int]):
@@ -122,7 +116,6 @@ def get_city_ec_input(data_path: str, city: str, windows: List[int]):
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].values.compute()
-        np_array = np.expand_dims(np_array, axis=2)
         yield np_array
 
 def get_city_ec_output(data_path: str, city: str, windows: List[int]):
@@ -166,7 +159,7 @@ class ApplianceAggregationLayer:
                             x=tf.data.Dataset.from_generator(
                                 generator=get_appliance_ec_input,
                                 args=(self.data_path, household, appliance, test_windows),
-                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
                             use_multiprocessing=True                                                                                                                  
                         )
                         np.savetxt(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/prediction.txt", self.hierarchy[city][community][household][appliance])
@@ -204,7 +197,7 @@ class HouseholdAggregationLayer:
                         x=tf.data.Dataset.from_generator(
                             generator=get_household_ec_input,
                             args=(self.data_path, household, test_windows),
-                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
                         use_multiprocessing=True                                                                                                                  
                     )
                     np.savetxt(self.data_path + f"/models/households/household={household}/prediction.txt", self.hierarchy[city][community][household])
@@ -237,7 +230,7 @@ class CommunityAggregationLayer:
                     x=tf.data.Dataset.from_generator(
                         generator=get_community_ec_input,
                         args=(self.data_path, community, test_windows),
-                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
                     use_multiprocessing=True                                                                                                                  
                 )
                 np.savetxt(self.data_path + f"/models/communities/community={community}/prediction.txt", self.hierarchy[city][community])
@@ -265,7 +258,7 @@ class CityAggregationLayer:
                 x=tf.data.Dataset.from_generator(
                     generator=get_city_ec_input,
                     args=(self.data_path, city, test_windows),
-                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True),
+                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
                 use_multiprocessing=True                                                                                                                  
             )
             np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", self.hierarchy[city])
