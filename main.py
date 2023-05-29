@@ -44,10 +44,10 @@ if __name__ == '__main__':
                 history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, train_windows),
-                                                    output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                    output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                     validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, val_windows),
-                                                    output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                    output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                     epochs=100,
                     use_multiprocessing=True,
                     callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
@@ -58,7 +58,7 @@ if __name__ == '__main__':
             history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, full_train_windows),
-                                                    output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                    output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                     epochs=100,
                     use_multiprocessing=True,
                     callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
@@ -88,10 +88,10 @@ if __name__ == '__main__':
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_household_ec_input(a, b, c), models.get_household_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, full_train_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_household_ec_input(a, b, c), models.get_household_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, val_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=100,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
@@ -103,7 +103,7 @@ if __name__ == '__main__':
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c), models.get_appliance_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, full_train_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=100,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
@@ -134,10 +134,10 @@ if __name__ == '__main__':
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, full_train_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, val_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=100,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
@@ -148,7 +148,7 @@ if __name__ == '__main__':
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, full_train_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=100,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
@@ -180,10 +180,10 @@ if __name__ == '__main__':
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, full_train_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, val_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=100,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
@@ -194,7 +194,7 @@ if __name__ == '__main__':
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, full_train_windows),
-                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
+                                                 output_signature=(tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.RaggedTensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=100,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
