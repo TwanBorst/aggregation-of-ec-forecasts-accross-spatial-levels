@@ -11,7 +11,7 @@ from math import floor
 
 
 def get_model():
-    inp = layers.Input((INPUT_SIZE, 8), ragged=True)
+    inp = layers.Input((INPUT_SIZE, 8))
 
     cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(inp)
     pool = layers.MaxPool1D(pool_size=2)(cnn)
@@ -27,7 +27,7 @@ def get_model():
     model = models.Model(inp, out)
     model.compile(loss='mae',
                 optimizer='adam',
-                metrics=['mae', 'rmse', 'mse', 'mape'])
+                metrics=['mae', metrics.RootMeanSquaredError(), 'mse', 'mape'])
     
     # utils.plot_model(model, show_shapes=True, show_layer_names=False)
     # print(model.summary())
@@ -66,6 +66,10 @@ def split_data(test_fraction: float, folds: int) -> Tuple[List[Tuple[List[int], 
 ################################################################################################################
 
 def get_appliance_ec_input(data_path: str, dataid: int, sensor: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(sensor) == bytes:
+        sensor = sensor.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_appliance", columns=[sensor, 'index', 'dataid'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['dataid'] == dataid]
     for window in windows:
@@ -74,6 +78,10 @@ def get_appliance_ec_input(data_path: str, dataid: int, sensor: str, windows: Li
         yield np_array
 
 def get_appliance_ec_output(data_path: str, dataid: int, sensor: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(sensor) == bytes:
+        sensor = sensor.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_appliance", columns=[sensor, 'index', 'dataid'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['dataid'] == dataid]
     for window in windows:
@@ -82,6 +90,8 @@ def get_appliance_ec_output(data_path: str, dataid: int, sensor: str, windows: L
         yield np_array
         
 def get_household_ec_input(data_path: str, dataid: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household", columns=['index', 'dataid', 'total'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['dataid'] == dataid]
     for window in windows:
@@ -90,6 +100,8 @@ def get_household_ec_input(data_path: str, dataid: int, windows: List[int]):
         yield np_array
 
 def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household", columns=['index', 'dataid', 'total'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['dataid'] == dataid]
     for window in windows:
@@ -98,6 +110,8 @@ def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
         yield np_array
         
 def get_community_ec_input(data_path: str, community: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household", columns=['index', 'community', 'total'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['community'] == community]
     for window in windows:
@@ -106,6 +120,8 @@ def get_community_ec_input(data_path: str, community: int, windows: List[int]):
         yield np_array
 
 def get_community_ec_output(data_path: str, community: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household", columns=['index', 'community', 'total'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['community'] == community]
     for window in windows:
@@ -114,6 +130,10 @@ def get_community_ec_output(data_path: str, community: int, windows: List[int]):
         yield np_array
         
 def get_city_ec_input(data_path: str, city: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(city) == bytes:
+        city = city.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household", columns=['index', 'city', 'total'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['community'] == city]
     for window in windows:
@@ -122,6 +142,10 @@ def get_city_ec_input(data_path: str, city: str, windows: List[int]):
         yield np_array
 
 def get_city_ec_output(data_path: str, city: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(city) == bytes:
+        city = city.decode('utf-8')
     ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household", columns=['index', 'city', 'total'] + FEATURE_COLUMNS)
     ddf = ddf[ddf['community'] == city]
     for window in windows:
