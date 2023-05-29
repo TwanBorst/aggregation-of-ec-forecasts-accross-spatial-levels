@@ -162,7 +162,7 @@ class ApplianceAggregationLayer:
                             x=tf.data.Dataset.from_generator(
                                 generator=get_appliance_ec_input,
                                 args=(self.data_path, household, appliance, test_windows),
-                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
+                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                             use_multiprocessing=True                                                                                                                  
                         )
                         np.savetxt(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/prediction.txt", self.hierarchy[city][community][household][appliance])
@@ -200,7 +200,7 @@ class HouseholdAggregationLayer:
                         x=tf.data.Dataset.from_generator(
                             generator=get_household_ec_input,
                             args=(self.data_path, household, test_windows),
-                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
+                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                         use_multiprocessing=True                                                                                                                  
                     )
                     np.savetxt(self.data_path + f"/models/households/household={household}/prediction.txt", self.hierarchy[city][community][household])
@@ -233,7 +233,7 @@ class CommunityAggregationLayer:
                     x=tf.data.Dataset.from_generator(
                         generator=get_community_ec_input,
                         args=(self.data_path, community, test_windows),
-                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
+                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                     use_multiprocessing=True                                                                                                                  
                 )
                 np.savetxt(self.data_path + f"/models/communities/community={community}/prediction.txt", self.hierarchy[city][community])
@@ -261,7 +261,7 @@ class CityAggregationLayer:
                 x=tf.data.Dataset.from_generator(
                     generator=get_city_ec_input,
                     args=(self.data_path, city, test_windows),
-                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=32, drop_remaining=True).batch(batch_size=1, drop_remaining=True),
+                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8, 1), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                 use_multiprocessing=True                                                                                                                  
             )
             np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", self.hierarchy[city])
