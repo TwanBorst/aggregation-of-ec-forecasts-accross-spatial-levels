@@ -38,9 +38,8 @@ class data_utils_class:
         
         availability_converter = lambda val: 0 if val == '' else int(val.strip('%'))
 
-        self.metadata_converters = {'egauge_1min_data_availability': availability_converter, metadata_time_prefix + 'data_availability': availability_converter}
+        self.metadata_converters = {metadata_time_prefix+'data_availability': availability_converter, metadata_time_prefix + 'data_availability': availability_converter}
         self.metadata_converters.update({sensor: (lambda val: True if val == "yes" else False) for sensor in SENSOR_NAMES})
-
 
     def process_data(self, files: str, metadata_files:str, save_path: str, from_time: pd.Timestamp, end_time: pd.Timestamp, sensors: List[str] = None):
         r"""
@@ -252,12 +251,13 @@ class data_utils_class:
         return ddf
     
     def get_appliances(self, metadata_files : str, household : int) -> List[str]:
-        original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid']+self.sensors_excluding_grid)
-        return original_metadata[original_metadata['dataid'] == household].drop(columns=['dataid']).dropna(axis='columns').compute().columns
+        original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid']+self.sensors_excluding_grid, converters=self.metadata_converters)
+        available = original_metadata[original_metadata['dataid'] == household].drop(columns=['dataid']).any()
+        return available[available].compute().index.tolist()
     
     def get_households(self, metadata_files : str) -> List[int]:
         original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid'])
-        return original_metadata.values.compute()
+        return np.concatenate(original_metadata.values.compute())
     
     def get_communities(self, metadata_files : str) -> List[int]:
         original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['community'])
@@ -277,7 +277,8 @@ class data_utils_class:
                     self.hierarchy[city][community] = {}
                     for household in original_metadata[original_metadata['community'] == community]['dataid'].values.compute():
                         self.hierarchy[city][community][household] = {}
-                        for appliance in original_metadata[original_metadata['dataid'] == household][self.sensors_excluding_grid].dropna(axis='columns').compute().columns:
+                        ddf = original_metadata[original_metadata['dataid'] == household][self.sensors_excluding_grid].any()
+                        for appliance in ddf[ddf].compute().index.tolist():
                             self.hierarchy[city][community][household][appliance] = None
                         
         return deepcopy(self.hierarchy)
