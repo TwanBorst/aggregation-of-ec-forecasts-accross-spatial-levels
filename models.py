@@ -113,7 +113,7 @@ def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
 def get_community_ec_input(data_path: str, community: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_community/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
@@ -122,7 +122,7 @@ def get_community_ec_input(data_path: str, community: int, windows: List[int]):
 def get_community_ec_output(data_path: str, community: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_community/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)]['total'].compute().to_numpy(dtype=np.float64)
@@ -133,7 +133,7 @@ def get_city_ec_input(data_path: str, city: str, windows: List[int]):
         data_path = data_path.decode('utf-8')
     if type(city) == bytes:
         city = city.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_city/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
@@ -144,7 +144,7 @@ def get_city_ec_output(data_path: str, city: str, windows: List[int]):
         data_path = data_path.decode('utf-8')
     if type(city) == bytes:
         city = city.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_city/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)]['total'].compute().to_numpy(dtype=np.float64)
