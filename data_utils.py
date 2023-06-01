@@ -145,17 +145,11 @@ class data_utils_class:
         print("\n--------------------------------", f"|      Repartitioning Appliance data started.       |", "--------------------------------\n")
         
         # Repartition appliance data
-        for progress, dataid in enumerate(dataids):
-            print("\n-------------------------------", f"|     Starting with dataid={dataid}.  progress: {progress}/{total}    |", "--------------------------------\n")
-            dataid_ddf = dd.read_parquet(save_path+"/temp/timestamp_extracted",
-                            filters=[('dataid', '==', dataid)])
-            dd.to_parquet(dataid_ddf.reset_index(), save_path+"/final_appliance",
-                        write_index=False, partition_on=["dataid"],
-                        name_function=lambda x: f"data-{x}.parquet",
-                        schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()},
-                        append=True)
-            print("\n--------------------------------", f"|      Done with dataid={dataid}       |", "--------------------------------\n")
-            
+        dataid_ddf = dd.read_parquet(save_path+"/temp/timestamp_extracted")
+        dd.to_parquet(dataid_ddf.repartition(partition_size="100MB"), save_path+"/final_appliance",
+                    write_index=False, partition_on=["dataid"],
+                    name_function=lambda x: f"data-{x}.parquet",
+                    schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()})
         print("\n--------------------------------", f"|      Repartitioning Appliance data done.       |", "--------------------------------\n")
 
     def generate_metadata(self, data_path: str, save_path: str, metadata_files: str, extra_metadata_cols : List[str] = [], community_size : int = 5):
