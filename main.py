@@ -4,7 +4,7 @@ from dask.distributed import Client
 from constants import *
 from data_utils import data_utils_class
 import models
-import os.makedirs
+import os
 
 if __name__ == '__main__':
     dask.config.set(temporary_directory=DASK_TMP_DIR)

@@ -8,7 +8,7 @@ from constants import FEATURE_COLUMNS, INPUT_SIZE, OUTPUT_SIZE, SAVE_DIR, TIME_F
 from typing import List, Tuple
 import numpy as np
 from math import floor
-import os.makedirs
+import os
 
 
 def get_model():
