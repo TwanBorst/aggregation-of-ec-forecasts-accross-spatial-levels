@@ -115,7 +115,7 @@ class data_utils_class:
             
             print("\n--------------------------------", f"|      Done with dataid={dataid}       |", "--------------------------------\n")
         
-
+        print("\n--------------------------------", f"|      Outlier detection and missing value filling started.       |", "--------------------------------\n")
                                             
         # If a sensor reports 1MW of charging we interperet it as an error and remove the datapoint
         # Fill in small gaps of 5 seconds with the previously encountered value and fill the rest up with 0's
@@ -131,14 +131,32 @@ class data_utils_class:
             
             dataid_ddf['dataid'] = dataid_ddf['dataid'].cat.as_ordered()
             
-            dd.to_parquet(self.timestamp_feature_extraction(dataid_ddf.reset_index()), save_path+"/final_appliance",
+            dd.to_parquet(self.timestamp_feature_extraction(dataid_ddf.reset_index()), save_path+"/temp/timestamp_extracted",
                         write_index=False, partition_on=["dataid"],
                         name_function=lambda x: f"data-{x}.parquet",
                         schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()},
                         append=True)
             
             print("\n--------------------------------", f"|      Done with dataid={dataid}       |", "--------------------------------\n")
+        
+        print("\n--------------------------------", f"|      Outlier detection and missing value filling done.       |", "--------------------------------\n")
 
+        
+        print("\n--------------------------------", f"|      Repartitioning Appliance data started.       |", "--------------------------------\n")
+        
+        # Repartition appliance data
+        for progress, dataid in enumerate(dataids):
+            print("\n-------------------------------", f"|     Starting with dataid={dataid}.  progress: {progress}/{total}    |", "--------------------------------\n")
+            dataid_ddf = dd.read_parquet(save_path+"/temp/timestamp_extracted",
+                            filters=[('dataid', '==', dataid)])
+            dd.to_parquet(dataid_ddf.reset_index(), save_path+"/final_appliance",
+                        write_index=False, partition_on=["dataid"],
+                        name_function=lambda x: f"data-{x}.parquet",
+                        schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()},
+                        append=True)
+            print("\n--------------------------------", f"|      Done with dataid={dataid}       |", "--------------------------------\n")
+            
+        print("\n--------------------------------", f"|      Repartitioning Appliance data done.       |", "--------------------------------\n")
 
     def generate_metadata(self, data_path: str, save_path: str, metadata_files: str, extra_metadata_cols : List[str] = [], community_size : int = 5):
         """
@@ -211,7 +229,7 @@ class data_utils_class:
 
         ddf_household = ddf[['dataid', self.time_column_name, "index"]+FEATURE_COLUMNS].assign(
             total=ddf[[x for x in SENSOR_NAMES if x not in ["solar", "solar2", "battery1", "grid"]]].sum(axis=1) - ddf[["solar", "solar2", "battery1"]].sum(axis=1))
-        dd.to_parquet(ddf_household, data_path+"/final_household",
+        dd.to_parquet(ddf_household.repartition(partition_size="100MB"), data_path+"/final_household",
                         write_index=False, partition_on=["dataid"],
                         name_function=lambda x: f"data-{x}.parquet",
                         schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()})
@@ -257,15 +275,15 @@ class data_utils_class:
     
     def get_households(self, metadata_files : str) -> List[int]:
         original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid'])
-        return np.concatenate(original_metadata.values.compute())
+        return original_metadata['dataid'].values.compute()
     
     def get_communities(self, metadata_files : str) -> List[int]:
         original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['community'])
-        return original_metadata.drop_duplicates(subset=['community']).values.compute()
+        return original_metadata.drop_duplicates(subset=['community'])['community'].values.compute()
     
     def get_cities(self, metadata_files : str) -> List[str]:
         original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['city'])
-        return original_metadata.drop_duplicates(subset=['city']).values.compute()
+        return original_metadata.drop_duplicates(subset=['city'])['city'].values.compute()
     
     def get_hierarchy_dict(self, metadata_files : str) -> dict:
         if self.hierarchy == None:

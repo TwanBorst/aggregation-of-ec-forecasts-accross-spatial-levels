@@ -52,7 +52,7 @@ if __name__ == '__main__':
                                                     output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                     epochs=30,
                     use_multiprocessing=True,
-                    callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+                    callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")]
                 )            
             print("\n-------------------------------", f"|     Done with KFold cross-validation for appliance '{sensor}' in household '{household}'!    |", "--------------------------------\n")
             
@@ -65,7 +65,7 @@ if __name__ == '__main__':
                                                     output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                     epochs=30,
                     use_multiprocessing=True,
-                    callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+                    callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",")]
                 )
             model.save(filepath=path+"model/", overwrite=True)
             
@@ -100,7 +100,7 @@ if __name__ == '__main__':
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")]
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for household '{household}'!    |", "--------------------------------\n")
 
@@ -114,7 +114,7 @@ if __name__ == '__main__':
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",")]
             )
         model.save(filepath=path+"model/", overwrite=True)
     
@@ -150,7 +150,7 @@ if __name__ == '__main__':
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")]
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for community '{community}'!    |", "--------------------------------\n")
         
@@ -163,7 +163,7 @@ if __name__ == '__main__':
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",")]
             )
         model.save(filepath=path+"model/", overwrite=True)
         
@@ -200,7 +200,7 @@ if __name__ == '__main__':
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")]
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for city '{city}'!    |", "--------------------------------\n")
         
@@ -213,7 +213,7 @@ if __name__ == '__main__':
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",")]
             )
         model.save(filepath=path+"model/", overwrite=True)
     
