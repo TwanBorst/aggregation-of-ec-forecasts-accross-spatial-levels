@@ -8,17 +8,13 @@ from constants import FEATURE_COLUMNS, INPUT_SIZE, OUTPUT_SIZE, SAVE_DIR, TIME_F
 from typing import List, Tuple
 import numpy as np
 from math import floor
+import os.makedirs
 
 
-def get_model(train_dataset : tf.data.Dataset):
+def get_model():
     inp = layers.Input((INPUT_SIZE, 8))
     
-    normalized_layer = layers.Normalization(axis=1)
-    normalized_layer.adapt(data=train_dataset)
-
-    normalized = normalized_layer(inp)
-    
-    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(normalized)
+    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(inp)
     pool = layers.MaxPool1D(pool_size=2)(cnn)
 
     cnn_2 = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation="relu")(pool)
@@ -75,7 +71,7 @@ def get_appliance_ec_input(data_path: str, dataid: int, sensor: str, windows: Li
         data_path = data_path.decode('utf-8')
     if type(sensor) == bytes:
         sensor = sensor.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_appliance/dataid="+str(dataid), columns=[sensor, 'index'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_appliance/dataid="+str(dataid), columns=[sensor, 'index'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][[sensor] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
@@ -95,7 +91,7 @@ def get_appliance_ec_output(data_path: str, dataid: int, sensor: str, windows: L
 def get_household_ec_input(data_path: str, dataid: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household/dataid="+str(dataid), columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_household/dataid="+str(dataid), columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
@@ -113,7 +109,7 @@ def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
 def get_community_ec_input(data_path: str, community: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_community/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_community/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
@@ -133,7 +129,7 @@ def get_city_ec_input(data_path: str, city: str, windows: List[int]):
         data_path = data_path.decode('utf-8')
     if type(city) == bytes:
         city = city.decode('utf-8')
-    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_city/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_city/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window, window + INPUT_SIZE)]
         np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
@@ -186,16 +182,19 @@ class ApplianceAggregationLayer:
                                 output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                             use_multiprocessing=True                                                                                                                  
                         )
+                        os.makedirs(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/", exists_ok=True)
                         np.savetxt(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/prediction.txt", self.hierarchy[city][community][household][appliance])
                         pd.from_dict(compute_metrics(list(get_appliance_ec_output(self.data_path, household, appliance, test_windows)), self.hierarchy[city][community][household][appliance])).to_csv(self.data_path+f"/models/appliances/household={household}/appliance={appliance}/evaluation.csv", index=False)
                     self.hierarchy[city][community][household] = np.add.reduce(self.hierarchy[city][community][household].values())
                     np.savetxt(self.data_path + f"/models/appliances/household={household}/prediction.txt", self.hierarchy[city][community][household])
                     pd.from_dict(compute_metrics(list(get_household_ec_output(self.data_path, household, test_windows)), self.hierarchy[city][community][household])).to_csv(self.data_path+f"/models/appliances/household={household}/evaluation.csv", index=False)
                 self.hierarchy[city][community] = np.add.reduce(self.hierarchy[city][community].values())
+                os.makedirs(self.data_path + f"/models/appliances/community={community}/", exists_ok=True)
                 np.savetxt(self.data_path + f"/models/appliances/community={community}/prediction.txt", self.hierarchy[city][community])
                 pd.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), self.hierarchy[city][community])).to_csv(self.data_path+f"/models/appliances/community={community}/evaluation.csv", index=False)
             self.hierarchy[city] = np.add.reduce(self.hierarchy[city].values())
-            np.savetxt(self.data_path + f"/models/appliances/city={community}/prediction.txt", self.hierarchy[city])
+            os.makedirs(self.data_path + f"/models/appliances/city={city}/", exists_ok=True)
+            np.savetxt(self.data_path + f"/models/appliances/city={city}/prediction.txt", self.hierarchy[city])
             pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/appliances/city={city}/evaluation.csv", index=False)
                     
 
@@ -224,13 +223,16 @@ class HouseholdAggregationLayer:
                             output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                         use_multiprocessing=True                                                                                                                  
                     )
+                    os.makedirs(self.data_path + f"/models/households/household={household}/", exists_ok=True)
                     np.savetxt(self.data_path + f"/models/households/household={household}/prediction.txt", self.hierarchy[city][community][household])
                     pd.from_dict(compute_metrics(list(get_household_ec_output(self.data_path, household, test_windows)), self.hierarchy[city][community][household])).to_csv(self.data_path+f"/models/households/household={household}/evaluation.csv", index=False)
                 self.hierarchy[city][community] = np.add.reduce(self.hierarchy[city][community].values())
+                os.makedirs(self.data_path + f"/models/households/community={community}/", exists_ok=True)
                 np.savetxt(self.data_path + f"/models/households/community={community}/prediction.txt", self.hierarchy[city][community])
                 pd.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), self.hierarchy[city][community])).to_csv(self.data_path+f"/models/households/community={community}/evaluation.csv", index=False)
             self.hierarchy[city] = np.add.reduce(self.hierarchy[city].values())
-            np.savetxt(self.data_path + f"/models/households/city={community}/prediction.txt", self.hierarchy[city])
+            os.makedirs(self.data_path + f"/models/households/city={city}/", exists_ok=True)
+            np.savetxt(self.data_path + f"/models/households/city={city}/prediction.txt", self.hierarchy[city])
             pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/households/city={city}/evaluation.csv", index=False)
                     
 
@@ -257,10 +259,12 @@ class CommunityAggregationLayer:
                         output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                     use_multiprocessing=True                                                                                                                  
                 )
+                os.makedirs(self.data_path + f"/models/communities/community={community}/", exists_ok=True)
                 np.savetxt(self.data_path + f"/models/communities/community={community}/prediction.txt", self.hierarchy[city][community])
                 pd.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), self.hierarchy[city][community])).to_csv(self.data_path+f"/models/communities/community={community}/evaluation.csv", index=False)
             self.hierarchy[city] = np.add.reduce(self.hierarchy[city].values())
-            np.savetxt(self.data_path + f"/models/communities/city={community}/prediction.txt", self.hierarchy[city])
+            os.makedirs(self.data_path + f"/models/communities/city={city}/", exists_ok=True)
+            np.savetxt(self.data_path + f"/models/communities/city={city}/prediction.txt", self.hierarchy[city])
             pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/communities/city={city}/evaluation.csv", index=False)
                     
 
@@ -285,5 +289,6 @@ class CityAggregationLayer:
                     output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
                 use_multiprocessing=True                                                                                                                  
             )
+            os.makedirs(self.data_path + f"/models/cities/city={city}/", exists_ok=True)
             np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", self.hierarchy[city])
             pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/cities/city={city}/evaluation.csv", index=False)

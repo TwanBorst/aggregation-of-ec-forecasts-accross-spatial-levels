@@ -251,6 +251,57 @@ class data_utils_class:
                         name_function=lambda x: f"data-{x}.parquet",
                         schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'city': pa.string()})
         
+    def normalize_data(self, data_path: str):
+        ddf: dd.DataFrame = dd.read_parquet(data_path+"/final_appliance")
+        mean = ddf[self.sensors_excluding_grid].mean(axis=0)
+        std = ddf[self.sensors_excluding_grid].std(axis=0)
+        ddf[self.sensors_excluding_grid] = (ddf[self.sensors_excluding_grid] - mean) / std
+        ddf = self.normalize_timestamp_features(ddf)
+        dd.to_parquet(ddf.repartition(partition_size="100MB"), data_path+"/normalized/final_appliance",
+            write_index=False, partition_on=["dataid"],
+            name_function=lambda x: f"data-{x}.parquet",
+            schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()})
+        
+        ddf: dd.DataFrame = dd.read_parquet(data_path+"/final_household")
+        mean = ddf["total"].mean()
+        std = ddf["total"].std()
+        ddf["total"] = (ddf["total"] - mean) / std
+        ddf = self.normalize_timestamp_features(ddf)
+        dd.to_parquet(ddf.repartition(partition_size="100MB"), data_path+"/normalized/final_household",
+            write_index=False, partition_on=["dataid"],
+            name_function=lambda x: f"data-{x}.parquet",
+            schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'dataid': pa.int32()})
+        
+        ddf: dd.DataFrame = dd.read_parquet(data_path+"/final_community")
+        mean = ddf["total"].mean()
+        std = ddf["total"].std()
+        ddf["total"] = (ddf["total"] - mean) / std
+        ddf = self.normalize_timestamp_features(ddf)
+        dd.to_parquet(ddf.repartition(partition_size="100MB"), data_path+"/normalized/final_community",
+                write_index=False, partition_on=["community"],
+                name_function=lambda x: f"data-{x}.parquet",
+                schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'community': pa.int32()})
+        
+        ddf: dd.DataFrame = dd.read_parquet(data_path+"/final_city")
+        mean = ddf["total"].mean()
+        std = ddf["total"].std()
+        ddf["total"] = (ddf["total"] - mean) / std
+        ddf = self.normalize_timestamp_features(ddf)
+        dd.to_parquet(ddf.repartition(partition_size="100MB"), data_path+"/normalized/final_city",
+                write_index=False, partition_on=["city"],
+                name_function=lambda x: f"data-{x}.parquet",
+                schema={self.time_column_name: pa.timestamp(unit='s', tz='UTC'), 'city': pa.string()})
+        
+    # Normalize timestamp features with MinMax normalization
+    def normalize_timestamp_features(self, ddf : dd.DataFrame) -> dd.DataFrame:
+        ddf["dayofyear"] = (ddf["dayofyear"] - 1) / 365
+        ddf["season"] = (ddf["season"] - 1) / 3
+        ddf["month"] = (ddf["month"] - 1) / 11
+        ddf["dayofweek"] = (ddf["dayofweek"] - 1) / 6
+        ddf["hourofday"] = ddf["hourofday"] / 23
+        ddf["minuteofhour"] = ddf["minuteofhour"] / 59
+        return ddf
+        
     def timestamp_feature_extraction(self, ddf : dd.DataFrame) -> dd.DataFrame:
         ddf['dayofyear'] = ddf[self.time_column_name].dt.dayofyear
         ddf['season'] = ddf[self.time_column_name].dt.quarter
@@ -259,7 +310,7 @@ class data_utils_class:
         ddf['hourofday'] = ddf[self.time_column_name].dt.hour
         ddf['minuteofhour'] = ddf[self.time_column_name].dt.minute
         ddf['typeofday'] = 1    # 1=Weekend, 0=Weekday
-        ddf['typeofday'] = ddf['typeofday'].where(ddf['dayofweek'].isin([5,6]), 0)
+        ddf['typeofday'] = ddf['typeofday'].where(ddf['dayofweek'].isin([5,6]), -1)
         return ddf
     
     def get_appliances(self, metadata_files : str, household : int) -> List[str]:

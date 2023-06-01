@@ -4,6 +4,7 @@ from dask.distributed import Client
 from constants import *
 from data_utils import data_utils_class
 import models
+import os.makedirs
 
 if __name__ == '__main__':
     dask.config.set(temporary_directory=DASK_TMP_DIR)
@@ -23,6 +24,9 @@ if __name__ == '__main__':
     # Aggregate the data to a household, community and city level and store it on disk
     data_utils.generate_aggregated_data(data_path=SAVE_DIR, metadata=CUSTOM_METADATA)
     
+    # Normalize data using Z-score normalization
+    data_utils.normalize_data(data_path=SAVE_DIR)
+    
     print("\n-------------------------------", f"|     Splitting the data...    |", "--------------------------------\n")
 
     # Split data
@@ -37,12 +41,11 @@ if __name__ == '__main__':
         for sensor in data_utils.get_appliances(CUSTOM_METADATA, household):
             print("\n-------------------------------", f"|     Start KFold cross-validation for appliance '{sensor}' in household '{household}'...   |", "--------------------------------\n")
             path = SAVE_DIR + f"models/appliances/household={household}/appliance={sensor}/"
+            os.makedirs(path, exist_ok=True)
             for fold in range(FOLDS):
                 train_windows = train_val_windows[fold][0]
                 val_windows = train_val_windows[fold][1]
-                model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
-                                                                    args=(SAVE_DIR, household, sensor, train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+                model = models.get_model()
                 history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, train_windows),
@@ -56,9 +59,7 @@ if __name__ == '__main__':
                 )            
             print("\n-------------------------------", f"|     Done with KFold cross-validation for appliance '{sensor}' in household '{household}'!    |", "--------------------------------\n")
             
-            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
-                                                                    args=(SAVE_DIR, household, sensor, full_train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+            model = models.get_model()
             history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, full_train_windows),
@@ -83,14 +84,13 @@ if __name__ == '__main__':
     
     # Apply KFold cross-validation to households and train final models
     for household in data_utils.get_households(CUSTOM_METADATA):
-        path = SAVE_DIR + f"models/households/household={household}/"
         print("\n-------------------------------", f"|     Start KFold cross-validation for household '{household}'...   |", "--------------------------------\n")
+        path = SAVE_DIR + f"models/households/household={household}/"
+        os.makedirs(path, exist_ok=True)
         for fold in range(FOLDS):
             train_windows = train_val_windows[fold][0]
             val_windows = train_val_windows[fold][1]
-            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
-                                                                    args=(SAVE_DIR, household, train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+            model = models.get_model()
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_household_ec_input(a, b, c), models.get_household_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, train_windows),
@@ -105,9 +105,7 @@ if __name__ == '__main__':
         print("\n-------------------------------", f"|     Done with KFold cross-validation for household '{household}'!    |", "--------------------------------\n")
 
         
-        model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
-                                                                    args=(SAVE_DIR, household, full_train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+        model = models.get_model()
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c), models.get_appliance_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, full_train_windows),
@@ -133,14 +131,13 @@ if __name__ == '__main__':
 
     # Apply KFold cross-validation to communities and train final models
     for community in data_utils.get_communities(CUSTOM_METADATA):
-        path = SAVE_DIR + f"models/communities/community={community}/"
         print("\n-------------------------------", f"|     Start KFold cross-validation for community '{community}'...   |", "--------------------------------\n")
+        path = SAVE_DIR + f"models/communities/community={community}/"
+        os.makedirs(path, exist_ok=True)
         for fold in range(FOLDS):
             train_windows = train_val_windows[fold][0]
             val_windows = train_val_windows[fold][1]
-            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
-                                                                    args=(SAVE_DIR, community, train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+            model = models.get_model()
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, train_windows),
@@ -154,9 +151,7 @@ if __name__ == '__main__':
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for community '{community}'!    |", "--------------------------------\n")
         
-        model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
-                                                                    args=(SAVE_DIR, community, full_train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+        model = models.get_model()
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, full_train_windows),
@@ -183,14 +178,13 @@ if __name__ == '__main__':
     
     # Apply KFold cross-validation to cities and train final models
     for city in data_utils.get_cities(CUSTOM_METADATA):
-        path = SAVE_DIR + f"models/cities/city={city}/"
         print("\n-------------------------------", f"|     Start KFold cross-validation for city '{city}'...   |", "--------------------------------\n")
+        path = SAVE_DIR + f"models/cities/city={city}/"
+        os.makedirs(path, exist_ok=True)
         for fold in range(FOLDS):
             train_windows = train_val_windows[fold][0]
             val_windows = train_val_windows[fold][1]
-            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
-                                                                    args=(SAVE_DIR, city, train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+            model = models.get_model()
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, train_windows),
@@ -204,9 +198,7 @@ if __name__ == '__main__':
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for city '{city}'!    |", "--------------------------------\n")
         
-        model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
-                                                                    args=(SAVE_DIR, city, full_train_windows),
-                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
+        model = models.get_model()
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, full_train_windows),
