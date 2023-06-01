@@ -10,10 +10,15 @@ import numpy as np
 from math import floor
 
 
-def get_model():
+def get_model(train_dataset : tf.data.Dataset):
     inp = layers.Input((INPUT_SIZE, 8))
+    
+    normalized_layer = layers.Normalization(axis=1)
+    normalized_layer.adapt(data=train_dataset)
 
-    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(inp)
+    normalized = normalized_layer(inp)
+    
+    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(normalized)
     pool = layers.MaxPool1D(pool_size=2)(cnn)
 
     cnn_2 = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation="relu")(pool)
@@ -23,7 +28,7 @@ def get_model():
     lstm_2 = layers.LSTM(units=64, activation="tanh")(lstm)
     dense = layers.Dense(units=32)(lstm_2)
     out = layers.Dense(units=OUTPUT_SIZE)(dense)
-
+    
     model = models.Model(inp, out)
     model.compile(loss='mae',
                 optimizer='adam',

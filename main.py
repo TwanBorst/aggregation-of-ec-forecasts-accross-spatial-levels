@@ -40,7 +40,9 @@ if __name__ == '__main__':
             for fold in range(FOLDS):
                 train_windows = train_val_windows[fold][0]
                 val_windows = train_val_windows[fold][1]
-                model = models.get_model()
+                model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
+                                                                    args=(SAVE_DIR, household, sensor, train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
                 history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, train_windows),
@@ -48,18 +50,20 @@ if __name__ == '__main__':
                     validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, val_windows),
                                                     output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                    epochs=100,
+                    epochs=30,
                     use_multiprocessing=True,
                     callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
                 )            
             print("\n-------------------------------", f"|     Done with KFold cross-validation for appliance '{sensor}' in household '{household}'!    |", "--------------------------------\n")
             
-            model = models.get_model()
+            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_appliance_ec_input,
+                                                                    args=(SAVE_DIR, household, sensor, full_train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
             history = model.fit(
                     x=tf.data.Dataset.from_generator(generator=lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d))),
                                                     args=(SAVE_DIR, household, sensor, full_train_windows),
                                                     output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                    epochs=100,
+                    epochs=30,
                     use_multiprocessing=True,
                     callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
                 )
@@ -84,27 +88,31 @@ if __name__ == '__main__':
         for fold in range(FOLDS):
             train_windows = train_val_windows[fold][0]
             val_windows = train_val_windows[fold][1]
-            model = models.get_model()
+            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
+                                                                    args=(SAVE_DIR, household, train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_household_ec_input(a, b, c), models.get_household_ec_output(a, b, c))),
-                                                 args=(SAVE_DIR, household, full_train_windows),
+                                                 args=(SAVE_DIR, household, train_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_household_ec_input(a, b, c), models.get_household_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, val_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                epochs=100,
+                epochs=30,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for household '{household}'!    |", "--------------------------------\n")
 
         
-        model = models.get_model()
+        model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_household_ec_input,
+                                                                    args=(SAVE_DIR, household, full_train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c), models.get_appliance_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, household, full_train_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                epochs=100,
+                epochs=30,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
             )
@@ -130,26 +138,30 @@ if __name__ == '__main__':
         for fold in range(FOLDS):
             train_windows = train_val_windows[fold][0]
             val_windows = train_val_windows[fold][1]
-            model = models.get_model()
+            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
+                                                                    args=(SAVE_DIR, community, train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
-                                                 args=(SAVE_DIR, community, full_train_windows),
+                                                 args=(SAVE_DIR, community, train_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, val_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                epochs=100,
+                epochs=30,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for community '{community}'!    |", "--------------------------------\n")
         
-        model = models.get_model()
+        model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_community_ec_input,
+                                                                    args=(SAVE_DIR, community, full_train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_community_ec_input(a, b, c), models.get_community_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, community, full_train_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                epochs=100,
+                epochs=30,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
             )
@@ -176,26 +188,30 @@ if __name__ == '__main__':
         for fold in range(FOLDS):
             train_windows = train_val_windows[fold][0]
             val_windows = train_val_windows[fold][1]
-            model = models.get_model()
+            model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
+                                                                    args=(SAVE_DIR, city, train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
             history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
-                                                 args=(SAVE_DIR, city, full_train_windows),
+                                                 args=(SAVE_DIR, city, train_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
                 validation_data=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, val_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                epochs=100,
+                epochs=30,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",", append=True)]
             )
         print("\n-------------------------------", f"|     Done with KFold cross-validation for city '{city}'!    |", "--------------------------------\n")
         
-        model = models.get_model()
+        model = models.get_model(tf.data.Dataset.from_generator(generator=models.get_city_ec_input,
+                                                                    args=(SAVE_DIR, city, full_train_windows),
+                                                                    output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)))
         history = model.fit(
                 x=tf.data.Dataset.from_generator(generator=lambda a, b, c: ((inp, out) for inp, out in zip(models.get_city_ec_input(a, b, c), models.get_city_ec_output(a, b, c))),
                                                  args=(SAVE_DIR, city, full_train_windows),
                                                  output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=1),
-                epochs=100,
+                epochs=30,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",", append=True)]
             )
