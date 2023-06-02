@@ -40,13 +40,10 @@ if __name__ == '__main__':
     
     
     # Apply KFold cross-validation to appliances and train final models
-    train_generator = lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d)))
-    val_generator = lambda a, b, c, d: ((inp, out) for inp, out in zip(models.get_appliance_ec_input(a, b, c, d), models.get_appliance_ec_output(a, b, c, d)))
-    
     for household in data_utils.get_households(CUSTOM_METADATA):
         sensors = [Process(target=models.learn,
                            args=(f"models/appliances/household={household}/appliance={sensor}/",
-                                 train_generator, val_generator, train_val_windows, full_train_windows,
+                                 models.get_appliance_ec_input, models.get_appliance_ec_output, train_val_windows, full_train_windows,
                                  (household, sensor), semaphore)
                           ) for sensor in data_utils.get_appliances(CUSTOM_METADATA, household)]
         for sensor in sensors:
@@ -70,7 +67,7 @@ if __name__ == '__main__':
     
     households = [Process(target=models.learn,
                           args=(f"models/households/household={household}/",
-                                train_generator, val_generator, train_val_windows, full_train_windows,
+                                models.get_household_ec_input, models.get_household_ec_output, train_val_windows, full_train_windows,
                                 (household,), semaphore)
                          ) for household in data_utils.get_households(CUSTOM_METADATA)]
     for household in households:
@@ -94,7 +91,7 @@ if __name__ == '__main__':
     # Apply KFold cross-validation to communities and train final models
     communities = [Process(target=models.learn,
                           args=(f"models/communities/community={community}/",
-                                train_generator, val_generator, train_val_windows, full_train_windows,
+                                models.get_community_ec_input, models.get_community_ec_output, train_val_windows, full_train_windows,
                                 (community,), semaphore)
                          ) for community in data_utils.get_communities(CUSTOM_METADATA)]
     for community in communities:
@@ -119,7 +116,7 @@ if __name__ == '__main__':
     # Apply KFold cross-validation to cities and train final models
     cities = [Process(target=models.learn,
                            args=(f"models/cities/city={city}/",
-                                 train_generator, val_generator, train_val_windows, full_train_windows,
+                                 models.get_city_ec_input, models.get_city_ec_output, train_val_windows, full_train_windows,
                                  (city,), semaphore)
                           ) for city in data_utils.get_cities(CUSTOM_METADATA)]
     for city in cities:
