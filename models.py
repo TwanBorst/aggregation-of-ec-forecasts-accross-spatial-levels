@@ -1,10 +1,11 @@
+from multiprocessing import Process
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, models, metrics, losses, utils
 import dask.dataframe as dd
 import pandas as pd
-from constants import FEATURE_COLUMNS, INPUT_SIZE, OUTPUT_SIZE, SAVE_DIR, TIME_FREQUENCY, FROM_TIME, END_TIME
+from constants import *
 from typing import List, Tuple
 import numpy as np
 from math import floor
@@ -292,3 +293,49 @@ class CityAggregationLayer:
             os.makedirs(self.data_path + f"/models/cities/city={city}/", exists_ok=True)
             np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", self.hierarchy[city])
             pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/cities/city={city}/evaluation.csv", index=False)
+
+def learn(path, train_generator, val_generator, train_val_windows, full_train_windows, model_identifier, semaphore):
+    print("\n-------------------------------", f"|     Start KFold cross-validation for '{path}'...   |", "--------------------------------\n", flush=True)
+    os.makedirs(path, exist_ok=True)
+    folds = [Process(target=models.fold,
+                        args=((SAVE_DIR, *model_identifier, train_val_windows[fold][0]),
+                            (SAVE_DIR, *model_identifier, train_val_windows[fold][1]),
+                            train_generator, val_generator, SAVE_DIR + path, semaphore)
+                        ) for fold in range(FOLDS)]
+    for fold in folds:
+        fold.start()
+    for fold in folds:
+        fold.join()
+    
+    print("\n-------------------------------", f"|     Done with KFold cross-validation for '{path}'!    |", "--------------------------------\n", flush=True)
+
+    
+    with semaphore:
+        model = get_model()
+        model.fit(
+                x=tf.data.Dataset.from_generator(generator=train_generator,
+                                                args=(SAVE_DIR, *model_identifier, full_train_windows),
+                                                output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=BATCH_SIZE),
+                epochs=30,
+                use_multiprocessing=True,
+                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",")],
+                max_queue_size=258
+            )
+        model.save(filepath=path+"model/", overwrite=True)
+        
+    print("\n-------------------------------", f"|     Done with training for '{path}'!    |", "--------------------------------\n", flush=True)
+
+def fold(train_args, val_args, train_generator, val_generator, path, semaphore):
+    with semaphore:
+        get_model().fit(
+            x=tf.data.Dataset.from_generator(generator=train_generator,
+                                            args=train_args,
+                                            output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=32),
+            validation_data=tf.data.Dataset.from_generator(generator=val_generator,
+                                            args=val_args,
+                                            output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=32),
+            epochs=30,
+            use_multiprocessing=True,
+            callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")],
+            max_queue_size=258
+        )

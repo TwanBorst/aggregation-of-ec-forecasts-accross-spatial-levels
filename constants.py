@@ -14,6 +14,7 @@ TIME_FREQUENCY = "15min"
 # KFold and test fraction configuration for splitting the data
 FOLDS = 5
 TEST_FRACTION = 0.2
+BATCH_SIZE = 64
 
 # File and folder paths
 ORIGINAL_METADATA = '../data/metadata.csv'
