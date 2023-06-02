@@ -12,7 +12,7 @@ if __name__ == '__main__':
 
     client = Client(n_workers=4, threads_per_worker=2, memory_limit="10GB")
     print(client)
-    semaphore = Semaphore(4)
+    semaphore = Semaphore(MAX_PARALLEL_TRAINING_MODELS)
     
     data_utils = data_utils_class(time_column_name=TIME_COLUMN_NAME, time_frequency=TIME_FREQUENCY, metadata_time_prefix=METADATA_TIME_PREFIX)
  

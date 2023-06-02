@@ -153,8 +153,6 @@ def compute_metrics(y_true, y_pred):
     rmse = metrics.RootMeanSquaredError()
     rmse.update_state(y_true, y_pred)
     return {'mae': losses.mae(y_true, y_pred), 'rmse': rmse.result().numpy(), 'mse': losses.MSE(y_true, y_pred), 'mape': losses.mape(y_true, y_pred)}
-
-        
         
 class ApplianceAggregationLayer:
     def __init__(self, hierarchy : dict) -> None:
@@ -180,7 +178,7 @@ class ApplianceAggregationLayer:
                             x=tf.data.Dataset.from_generator(
                                 generator=get_appliance_ec_input,
                                 args=(self.data_path, household, appliance, test_windows),
-                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
+                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
                             use_multiprocessing=True                                                                                                                  
                         )
                         os.makedirs(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/", exists_ok=True)
@@ -221,7 +219,7 @@ class HouseholdAggregationLayer:
                         x=tf.data.Dataset.from_generator(
                             generator=get_household_ec_input,
                             args=(self.data_path, household, test_windows),
-                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
+                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
                         use_multiprocessing=True                                                                                                                  
                     )
                     os.makedirs(self.data_path + f"/models/households/household={household}/", exists_ok=True)
@@ -257,8 +255,8 @@ class CommunityAggregationLayer:
                     x=tf.data.Dataset.from_generator(
                         generator=get_community_ec_input,
                         args=(self.data_path, community, test_windows),
-                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
-                    use_multiprocessing=True                                                                                                                  
+                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
+                    use_multiprocessing=True                                                                                                                
                 )
                 os.makedirs(self.data_path + f"/models/communities/community={community}/", exists_ok=True)
                 np.savetxt(self.data_path + f"/models/communities/community={community}/prediction.txt", self.hierarchy[city][community])
@@ -287,7 +285,7 @@ class CityAggregationLayer:
                 x=tf.data.Dataset.from_generator(
                     generator=get_city_ec_input,
                     args=(self.data_path, city, test_windows),
-                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=1).batch(batch_size=1),
+                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
                 use_multiprocessing=True                                                                                                                  
             )
             os.makedirs(self.data_path + f"/models/cities/city={city}/", exists_ok=True)
@@ -296,7 +294,7 @@ class CityAggregationLayer:
 
 def learn(path, model_input, model_output, train_val_windows, full_train_windows, model_identifier, semaphore):
     print("\n-------------------------------", f"|     Start KFold cross-validation for '{path}'...   |", "--------------------------------\n", flush=True)
-    os.makedirs(path, exist_ok=True)
+    os.makedirs(SAVE_DIR + path, exist_ok=True)
     folds = [Process(target=run_fold,
                         args=((SAVE_DIR, *model_identifier, train_val_windows[fold][0]),
                             (SAVE_DIR, *model_identifier, train_val_windows[fold][1]),
@@ -317,8 +315,8 @@ def learn(path, model_input, model_output, train_val_windows, full_train_windows
                                                 output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=BATCH_SIZE),
                 epochs=30,
                 use_multiprocessing=True,
-                callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_full.csv", separator=",")],
-                max_queue_size=150
+                callbacks=[tf.keras.callbacks.CSVLogger(SAVE_DIR+path + f"history_log_full.csv", separator=",")],
+                max_queue_size=60
             )
         model.save(filepath=path+"model/", overwrite=True)
         
@@ -338,5 +336,5 @@ def run_fold(train_args, val_args, path, model_input, model_output, fold, semaph
             epochs=30,
             use_multiprocessing=True,
             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")],
-            max_queue_size=129
+            max_queue_size=60
         )
