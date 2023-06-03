@@ -1,28 +1,29 @@
 import pandas as pd
 
 # Input and output timesteps for the models
-INPUT_SIZE = 672
-OUTPUT_SIZE = 96
+INPUT_SIZE = 288
+OUTPUT_SIZE = 48
 
 # From and end time that will be used thoughout the code
-FROM_TIME = pd.Timestamp('2019-05-01 05:00:00+00:00', tz="UTC")
-END_TIME = pd.Timestamp('2019-11-01 04:45:00+00:00', tz="UTC")
+FROM_TIME = pd.Timestamp('2019-06-01 05:00:00+00:00', tz="UTC")
+END_TIME = pd.Timestamp('2019-09-01 04:45:00+00:00', tz="UTC")
 
 # Timestep frequency
 TIME_FREQUENCY = "15min"
 
 # KFold and test fraction configuration for splitting the data
-FOLDS = 5
+FOLDS = 3
 TEST_FRACTION = 0.2
 BATCH_SIZE = 64
 MAX_PARALLEL_TRAINING_MODELS = 3
+EPOCHS = 20
 
 # File and folder paths
-ORIGINAL_METADATA = '../data/metadata.csv'
-CUSTOM_METADATA = '../data/generated/metadata_15min.csv'
-DATA_GLOB = '../data/15minute_data*/15minute_data*.csv'
-SAVE_DIR = 'D:/RP_Data/15min/'      # A lot of data can be stored in this folder depending on the time frequency and size of the data!
-DASK_TMP_DIR = 'D:/tmp'             # Dask will use this folder when it runs out of memory or when a shuffle needs to take place. A lot of data can temporarily be stored in this folder!
+ORIGINAL_METADATA = './data/metadata.csv'
+CUSTOM_METADATA = './data/generated/metadata_15min.csv'
+DATA_GLOB = './data/15minute_data*/15minute_data*.csv'
+SAVE_DIR = './data/15min/'      # A lot of data can be stored in this folder depending on the time frequency and size of the data!
+DASK_TMP_DIR = './tmp'             # Dask will use this folder when it runs out of memory or when a shuffle needs to take place. A lot of data can temporarily be stored in this folder!
 
 
 METADATA_TIME_PREFIX = 'egauge_1min_'

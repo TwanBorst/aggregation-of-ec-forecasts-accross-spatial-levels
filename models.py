@@ -15,21 +15,21 @@ import os
 def get_model():
     inp = layers.Input((INPUT_SIZE, 8))
     
-    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(INPUT_SIZE, 8))(inp)
-    pool = layers.MaxPool1D(pool_size=2)(cnn)
+    cnn = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation='relu', input_shape=(None ,INPUT_SIZE, 8))(inp)
+    pool = layers.MaxPooling1D(pool_size=2)(cnn)
 
-    cnn_2 = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation="relu")(pool)
-    pool_2 = layers.MaxPooling1D(pool_size=2)(cnn_2)
+    # cnn_2 = layers.Conv1D(filters=64, kernel_size=2, strides=1, padding='same', activation="relu")(pool)
+    # pool_2 = layers.MaxPooling1D(pool_size=2)(cnn_2)
 
-    lstm = layers.LSTM(units=64, activation="tanh", return_sequences=True)(pool_2)
-    lstm_2 = layers.LSTM(units=64, activation="tanh")(lstm)
+    # lstm = layers.LSTM(units=64, activation="tanh", return_sequences=True)(pool)
+    lstm_2 = layers.LSTM(units=64, activation="tanh")(pool)
     dense = layers.Dense(units=32)(lstm_2)
     out = layers.Dense(units=OUTPUT_SIZE)(dense)
     
     model = models.Model(inp, out)
     model.compile(loss='mae',
                 optimizer='adam',
-                metrics=['mae', metrics.RootMeanSquaredError(), 'mse', 'mape'])
+                metrics=[metrics.RootMeanSquaredError()])
     
     # utils.plot_model(model, show_shapes=True, show_layer_names=False)
     # print(model.summary())
@@ -152,7 +152,8 @@ def get_city_ec_output(data_path: str, city: str, windows: List[int]):
 def compute_metrics(y_true, y_pred):
     rmse = metrics.RootMeanSquaredError()
     rmse.update_state(y_true, y_pred)
-    return {'mae': losses.mae(y_true, y_pred), 'rmse': rmse.result().numpy(), 'mse': losses.MSE(y_true, y_pred), 'mape': losses.mape(y_true, y_pred)}
+    # return {'mae': losses.mae(y_true, y_pred), 'rmse': rmse.result().numpy(), 'mse': losses.MSE(y_true, y_pred), 'mape': losses.mape(y_true, y_pred)}
+    return {'mae': losses.mae(y_true, y_pred), 'rmse': rmse.result().numpy()}
         
 class ApplianceAggregationLayer:
     def __init__(self, hierarchy : dict) -> None:
@@ -286,26 +287,26 @@ class CityAggregationLayer:
                     generator=get_city_ec_input,
                     args=(self.data_path, city, test_windows),
                     output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
-                use_multiprocessing=True                                                                                                                  
+                use_multiprocessing=True                                                                                                               
             )
             os.makedirs(self.data_path + f"/models/cities/city={city}/", exists_ok=True)
             np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", self.hierarchy[city])
             pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/cities/city={city}/evaluation.csv", index=False)
 
 def learn(path, model_input, model_output, train_val_windows, full_train_windows, model_identifier, semaphore):
-    print("\n-------------------------------", f"|     Start KFold cross-validation for '{path}'...   |", "--------------------------------\n", flush=True)
+    # print("\n-------------------------------", f"|     Start KFold cross-validation for '{path}'...   |", "--------------------------------\n", flush=True)
     os.makedirs(SAVE_DIR + path, exist_ok=True)
-    folds = [Process(target=run_fold,
-                        args=((SAVE_DIR, *model_identifier, train_val_windows[fold][0]),
-                            (SAVE_DIR, *model_identifier, train_val_windows[fold][1]),
-                            SAVE_DIR + path, model_input, model_output, fold, semaphore)
-                        ) for fold in range(FOLDS)]
-    for fold in folds:
-        fold.start()
-    for fold in folds:
-        fold.join()
+    # folds = [Process(target=run_fold,
+    #                     args=((SAVE_DIR, *model_identifier, train_val_windows[fold][0]),
+    #                         (SAVE_DIR, *model_identifier, train_val_windows[fold][1]),
+    #                         SAVE_DIR + path, model_input, model_output, fold, semaphore)
+    #                     ) for fold in range(FOLDS)]
+    # for fold in folds:
+    #     fold.start()
+    # for fold in folds:
+    #     fold.join()
     
-    print("\n-------------------------------", f"|     Done with KFold cross-validation for '{path}'!    |", "--------------------------------\n", flush=True)
+    # print("\n-------------------------------", f"|     Done with KFold cross-validation for '{path}'!    |", "--------------------------------\n", flush=True)
 
     with semaphore:
         model = get_model()
@@ -313,13 +314,13 @@ def learn(path, model_input, model_output, train_val_windows, full_train_windows
                 x=tf.data.Dataset.from_generator(generator=lambda *gen_args: ((inp, out) for inp, out in zip(model_input(*gen_args), model_output(*gen_args))),
                                                 args=(SAVE_DIR, *model_identifier, full_train_windows),
                                                 output_signature=(tf.TensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32), tf.TensorSpec(shape=(OUTPUT_SIZE,), dtype=tf.float32))).batch(batch_size=BATCH_SIZE),
-                epochs=30,
+                epochs=EPOCHS,
                 use_multiprocessing=True,
                 callbacks=[tf.keras.callbacks.CSVLogger(SAVE_DIR+path + f"history_log_full.csv", separator=",")],
-                max_queue_size=60
+                max_queue_size=5
             )
-        model.save(filepath=path+"model/", overwrite=True)
-        
+    model.save(filepath=path+"model/", overwrite=True)
+            
     print("\n-------------------------------", f"|     Done with training for '{path}'!    |", "--------------------------------\n", flush=True)
     
 def run_fold(train_args, val_args, path, model_input, model_output, fold, semaphore):
@@ -333,8 +334,8 @@ def run_fold(train_args, val_args, path, model_input, model_output, fold, semaph
             validation_data=tf.data.Dataset.from_generator(generator=gen,
                                             args=val_args,
                                             output_signature=output_signature).batch(batch_size=BATCH_SIZE),
-            epochs=30,
+            epochs=EPOCHS,
             use_multiprocessing=True,
             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")],
-            max_queue_size=60
+            max_queue_size=5
         )

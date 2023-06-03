@@ -2,7 +2,7 @@ from typing import List
 import numpy as np
 import pandas as pd
 import dask.dataframe as dd
-from constants import FEATURE_COLUMNS, SENSOR_NAMES
+from constants import *
 from math import floor
 import pyarrow as pa
 from copy import deepcopy
@@ -70,16 +70,11 @@ class data_utils_class:
         data_dtype[self.time_column_name] = object
         
         ddf : dd.DataFrame = dd.read_csv(files, dtype = data_dtype, blocksize=10e7, usecols=collumns)
-        original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid', 'state', self.metadata_time_prefix+'min_time', self.metadata_time_prefix+'max_time'])
-        original_metadata[self.metadata_time_prefix+'max_time'] = dd.to_datetime(original_metadata[self.metadata_time_prefix+'max_time'], utc=True)
-        original_metadata[self.metadata_time_prefix+'min_time'] = dd.to_datetime(original_metadata[self.metadata_time_prefix+'min_time'], utc=True)
-
+        original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid', 'state', 'delta_year'])
+        original_metadata['delta_year'] = dd.to_timedelta(original_metadata['delta_year'])
         
-        # Drop dataids that don't have data within the from and end dates while ignoring years.
-        original_metadata['delta_year'] = (end_time.year - original_metadata[self.metadata_time_prefix+'max_time'].dt.year).astype('timedelta64[Y]')
-        original_metadata['delta_year'] = original_metadata['delta_year'].where(original_metadata[self.metadata_time_prefix+'max_time'] + original_metadata['delta_year'] >= end_time, original_metadata['delta_year'] + np.timedelta64(1, 'Y'))
-        filter_and_offset = original_metadata[original_metadata[self.metadata_time_prefix+'min_time'] + original_metadata['delta_year'] <= from_time][['dataid', 'delta_year']]
-        ddf = ddf.merge(filter_and_offset, how="inner", on=["dataid"])
+        # Filter dataids not in metadata
+        ddf = ddf.merge(original_metadata[['dataid', 'delta_year']], how="inner", on=["dataid"])
         
         # Align the recorded datetimes of the data to the same year
         ddf[self.time_column_name] = dd.to_datetime(ddf[self.time_column_name], utc=True)
@@ -200,11 +195,20 @@ class data_utils_class:
         original_metadata = original_metadata.set_index('dataid')
         
         ddf : dd.DataFrame = ddf.merge(original_metadata, how='left', left_index=True, right_index=True)[merged_columns]
+        
+        # Drop dataids that don't have data within the from and end dates while ignoring years.
+        ddf['delta_year'] = (END_TIME.year - ddf[self.metadata_time_prefix+'max_time'].dt.year).astype('timedelta64[Y]')
+        ddf['delta_year'] = ddf['delta_year'].where(ddf[self.metadata_time_prefix+'max_time'] + ddf['delta_year'] >= END_TIME, ddf['delta_year'] + np.timedelta64(1, 'Y'))
+        ddf = ddf[ddf[self.metadata_time_prefix+'min_time'] + ddf['delta_year'] <= FROM_TIME]
             
-        ddf['community'] = (ddf.groupby('city').cumcount() % community_size == 0).replace({True: 1, False: 0})
+        # Assign communities and drop smaller communities
         ddf = ddf.sort_values(['city', 'dataid'])
+        ddf['community'] = (ddf.groupby('city').cumcount() % community_size == 0).replace({True: 1, False: 0})
         ddf['community'] = ddf['community'].cumsum()
-
+        community_sizes = ddf['community'].value_counts().reset_index()
+        community_filter = community_sizes[community_sizes['count'] == community_size]['community'].compute()
+        ddf = ddf[ddf['community'].isin(community_filter)]
+        
         ddf.to_csv(save_path, single_file = True)
         
         
