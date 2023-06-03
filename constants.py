@@ -5,8 +5,8 @@ INPUT_SIZE = 288
 OUTPUT_SIZE = 48
 
 # From and end time that will be used thoughout the code
-FROM_TIME = pd.Timestamp('2019-06-01 05:00:00+00:00', tz="UTC")
-END_TIME = pd.Timestamp('2019-09-01 04:45:00+00:00', tz="UTC")
+FROM_TIME = pd.Timestamp('2018-06-01 05:00:00+00:00', tz="UTC")
+END_TIME = pd.Timestamp('2018-09-01 04:45:00+00:00', tz="UTC")
 
 # Timestep frequency
 TIME_FREQUENCY = "15min"
