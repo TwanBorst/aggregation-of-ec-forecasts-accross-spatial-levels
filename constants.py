@@ -16,7 +16,7 @@ FOLDS = 3
 TEST_FRACTION = 0.2
 BATCH_SIZE = 64
 MAX_PARALLEL_TRAINING_MODELS = 5
-EPOCHS = 50
+EPOCHS = 25
 
 # File and folder paths
 ORIGINAL_METADATA = './data/metadata.csv'
