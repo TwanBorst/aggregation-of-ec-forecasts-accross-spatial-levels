@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     # Split data
     train_val_windows, test_windows = models.split_data(TEST_FRACTION, FOLDS)
-    full_train_windows = models.split_data(TEST_FRACTION, 1)[0][0]
+    full_train_windows = models.split_data(TEST_FRACTION, 1)[0][0][0]
     
     print("\n-------------------------------", f"|     Done splitting the data!    |", "--------------------------------\n")
     
