@@ -319,7 +319,7 @@ def learn(path, model_input, model_output, train_val_windows, full_train_windows
                 callbacks=[tf.keras.callbacks.CSVLogger(SAVE_DIR+path + f"history_log_full.csv", separator=",")],
                 max_queue_size=5
             )
-    model.save(filepath=path+"model/", overwrite=True)
+        model.save(filepath=SAVE_DIR+path+"model/", overwrite=True)
             
     print("\n-------------------------------", f"|     Done with training for '{path}'!    |", "--------------------------------\n", flush=True)
     
