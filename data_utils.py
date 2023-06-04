@@ -41,6 +41,8 @@ class data_utils_class:
         self.metadata_converters = {metadata_time_prefix+'data_availability': availability_converter, metadata_time_prefix + 'data_availability': availability_converter}
         self.metadata_converters.update({sensor: (lambda val: True if val == "yes" else False) for sensor in SENSOR_NAMES})
 
+        self.hierarchy = None
+
     def process_data(self, files: str, metadata_files:str, save_path: str, from_time: pd.Timestamp, end_time: pd.Timestamp, sensors: List[str] = None):
         r"""
         Used to process the original unpacked data. Missing rows (seconds) are filled with the last value of the 5 seconds that came before.
@@ -337,10 +339,10 @@ class data_utils_class:
     def get_hierarchy_dict(self, metadata_files : str) -> dict:
         if self.hierarchy == None:
             self.hierarchy = {}
-            original_metadata : pd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid', 'city', 'community']+self.sensors_excluding_grid)
-            for city in original_metadata['city'].drop_duplicates(subset=['city']).values.compute():
+            original_metadata : pd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid', 'city', 'community']+self.sensors_excluding_grid, converters=self.metadata_converters)
+            for city in original_metadata['city'].drop_duplicates().values.compute():
                 self.hierarchy[city] = {}
-                for community in original_metadata[original_metadata['city'] == city]['community'].drop_duplicates(subset=['community']).values.compute():
+                for community in original_metadata[original_metadata['city'] == city]['community'].drop_duplicates().values.compute():
                     self.hierarchy[city][community] = {}
                     for household in original_metadata[original_metadata['community'] == community]['dataid'].values.compute():
                         self.hierarchy[city][community][household] = {}

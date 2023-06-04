@@ -1,4 +1,4 @@
-from multiprocessing import Process
+from multiprocessing import Process, Semaphore, Manager
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
@@ -171,32 +171,46 @@ class ApplianceAggregationLayer:
                         self.hierarchy[city][community][household][appliance] = models.load_model(self.data_path + f"models/appliances/household={household}/appliance={appliance}/model")
                         
     def evaluate(self, test_windows : List[int]):
-        for city in self.hierarchy:
-            for community in self.hierarchy[city]:
-                for household in self.hierarchy[city][community]:
-                    for appliance in self.hierarchy[city][community][household]:
-                        self.hierarchy[city][community][household][appliance] = self.hierarchy[city][community][household][appliance].predict(
-                            x=tf.data.Dataset.from_generator(
-                                generator=get_appliance_ec_input,
-                                args=(self.data_path, household, appliance, test_windows),
-                                output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
-                            use_multiprocessing=True                                                                                                                  
-                        )
-                        os.makedirs(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/", exists_ok=True)
-                        np.savetxt(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/prediction.txt", self.hierarchy[city][community][household][appliance])
-                        pd.from_dict(compute_metrics(list(get_appliance_ec_output(self.data_path, household, appliance, test_windows)), self.hierarchy[city][community][household][appliance])).to_csv(self.data_path+f"/models/appliances/household={household}/appliance={appliance}/evaluation.csv", index=False)
-                    self.hierarchy[city][community][household] = np.add.reduce(self.hierarchy[city][community][household].values())
-                    np.savetxt(self.data_path + f"/models/appliances/household={household}/prediction.txt", self.hierarchy[city][community][household])
-                    pd.from_dict(compute_metrics(list(get_household_ec_output(self.data_path, household, test_windows)), self.hierarchy[city][community][household])).to_csv(self.data_path+f"/models/appliances/household={household}/evaluation.csv", index=False)
-                self.hierarchy[city][community] = np.add.reduce(self.hierarchy[city][community].values())
-                os.makedirs(self.data_path + f"/models/appliances/community={community}/", exists_ok=True)
-                np.savetxt(self.data_path + f"/models/appliances/community={community}/prediction.txt", self.hierarchy[city][community])
-                pd.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), self.hierarchy[city][community])).to_csv(self.data_path+f"/models/appliances/community={community}/evaluation.csv", index=False)
-            self.hierarchy[city] = np.add.reduce(self.hierarchy[city].values())
-            os.makedirs(self.data_path + f"/models/appliances/city={city}/", exists_ok=True)
-            np.savetxt(self.data_path + f"/models/appliances/city={city}/prediction.txt", self.hierarchy[city])
-            pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/appliances/city={city}/evaluation.csv", index=False)
-                    
+        with Manager() as manager:
+            semaphore = Semaphore(MAX_PARALLEL_TRAINING_MODELS)
+            processes = []
+            for city, communities in self.hierarchy.items():
+                for community, households in communities.items():
+                    for household, appliances in households.items():
+                        result_dict = manager.dict()
+                        for appliance, model in appliances.items():
+                            process = Process(target=predict,
+                                              args=(get_appliance_ec_input,
+                                                    (self.data_path, household, appliance, test_windows),
+                                                    model, result_dict, appliance, semaphore))
+                            process.start()
+                            processes.append(process)
+                        self.hierarchy[city][community][household] = result_dict
+
+            for process in processes:
+                process.join()
+            for city, communities in self.hierarchy.items():
+                community_predictions = []
+                for community, households in communities.items():
+                    household_predictions = []
+                    for household, appliances in households.items():
+                        appliance_predictions = []
+                        for appliance, appliance_prediction in appliances.items():
+                            np.savetxt(self.data_path + f"/models/appliances/household={household}/appliance={appliance}/prediction.txt", appliance_prediction)
+                            pd.DataFrame.from_dict(compute_metrics(list(get_appliance_ec_output(self.data_path, household, appliance, test_windows)), appliance_prediction)).to_csv(self.data_path+f"/models/appliances/household={household}/appliance={appliance}/evaluation.csv", index=False)
+                            appliance_predictions.append(appliance_prediction)
+                        household_prediction = np.add.reduce(appliance_predictions)
+                        np.savetxt(self.data_path + f"/models/appliances/household={household}/prediction.txt", household_prediction)
+                        pd.DataFrame.from_dict(compute_metrics(list(get_household_ec_output(self.data_path, household, test_windows)), household_prediction)).to_csv(self.data_path+f"/models/appliances/household={household}/evaluation.csv", index=False)
+                        household_predictions.append(household_prediction)
+                    community_prediction = np.add.reduce(household_predictions)
+                    np.savetxt(self.data_path + f"/models/appliances/community={community}/prediction.txt", community_prediction)
+                    pd.DataFrame.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), community_prediction)).to_csv(self.data_path+f"/models/appliances/community={community}/evaluation.csv", index=False)
+                    community_predictions.append(community_prediction)
+                city_prediction = np.add.reduce(community_predictions)
+                np.savetxt(self.data_path + f"/models/appliances/city={city}/prediction.txt", city_prediction)
+                pd.DataFrame.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), city_prediction)).to_csv(self.data_path+f"/models/appliances/city={city}/evaluation.csv", index=False)
+
 
 class HouseholdAggregationLayer:
     def __init__(self, hierarchy : dict) -> None:
@@ -213,28 +227,39 @@ class HouseholdAggregationLayer:
                     self.hierarchy[city][community][household] = models.load_model(self.data_path + f"models/households/household={household}/model")
                         
     def evaluate(self, test_windows : List[int]):
-        for city in self.hierarchy:
-            for community in self.hierarchy[city]:
-                for household in self.hierarchy[city][community]:
-                    self.hierarchy[city][community][household] = self.hierarchy[city][community][household].predict(
-                        x=tf.data.Dataset.from_generator(
-                            generator=get_household_ec_input,
-                            args=(self.data_path, household, test_windows),
-                            output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
-                        use_multiprocessing=True                                                                                                                  
-                    )
-                    os.makedirs(self.data_path + f"/models/households/household={household}/", exists_ok=True)
-                    np.savetxt(self.data_path + f"/models/households/household={household}/prediction.txt", self.hierarchy[city][community][household])
-                    pd.from_dict(compute_metrics(list(get_household_ec_output(self.data_path, household, test_windows)), self.hierarchy[city][community][household])).to_csv(self.data_path+f"/models/households/household={household}/evaluation.csv", index=False)
-                self.hierarchy[city][community] = np.add.reduce(self.hierarchy[city][community].values())
-                os.makedirs(self.data_path + f"/models/households/community={community}/", exists_ok=True)
-                np.savetxt(self.data_path + f"/models/households/community={community}/prediction.txt", self.hierarchy[city][community])
-                pd.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), self.hierarchy[city][community])).to_csv(self.data_path+f"/models/households/community={community}/evaluation.csv", index=False)
-            self.hierarchy[city] = np.add.reduce(self.hierarchy[city].values())
-            os.makedirs(self.data_path + f"/models/households/city={city}/", exists_ok=True)
-            np.savetxt(self.data_path + f"/models/households/city={city}/prediction.txt", self.hierarchy[city])
-            pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/households/city={city}/evaluation.csv", index=False)
-                    
+        with Manager() as manager:
+            semaphore = Semaphore(MAX_PARALLEL_TRAINING_MODELS)
+            processes = []
+            for city, communities in self.hierarchy.items():
+                for community, households in communities.items():
+                    result_dict = manager.dict()
+                    for household, model in households.items():
+                        process = Process(target=predict,
+                                          args=(get_household_ec_input,
+                                                (self.data_path, household, test_windows),
+                                                model, result_dict, household, semaphore))
+                        process.start()
+                        processes.append(process)
+                    self.hierarchy[city][community] = result_dict
+
+            for process in processes:
+                process.join()
+            for city, communities in self.hierarchy.items():
+                community_predictions = []
+                for community, households in communities.items():
+                    household_predictions = []
+                    for household, household_prediction in households.items():
+                        np.savetxt(self.data_path + f"/models/households/household={household}/prediction.txt", household_prediction)
+                        pd.DataFrame.from_dict(compute_metrics(list(get_household_ec_output(self.data_path, household, test_windows)), household_prediction)).to_csv(self.data_path+f"/models/households/household={household}/evaluation.csv", index=False)
+                        household_predictions.append(household_prediction)
+                    community_prediction = np.add.reduce(household_predictions)
+                    np.savetxt(self.data_path + f"/models/households/community={community}/prediction.txt", community_prediction)
+                    pd.DataFrame.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), community_prediction)).to_csv(self.data_path+f"/models/households/community={community}/evaluation.csv", index=False)
+                    community_predictions.append(community_prediction)
+                city_prediction = np.add.reduce(community_predictions)
+                np.savetxt(self.data_path + f"/models/households/city={city}/prediction.txt", city_prediction)
+                pd.DataFrame.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), city_prediction)).to_csv(self.data_path+f"/models/households/city={city}/evaluation.csv", index=False)
+
 
 class CommunityAggregationLayer:
     def __init__(self, hierarchy : dict) -> None:
@@ -250,22 +275,30 @@ class CommunityAggregationLayer:
                 self.hierarchy[city][community] = models.load_model(self.data_path + f"models/communities/community={community}/model")
                         
     def evaluate(self, test_windows : List[int]):
-        for city in self.hierarchy:
-            for community in self.hierarchy[city]:
-                self.hierarchy[city][community] = self.hierarchy[city][community].predict(
-                    x=tf.data.Dataset.from_generator(
-                        generator=get_community_ec_input,
-                        args=(self.data_path, community, test_windows),
-                        output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
-                    use_multiprocessing=True                                                                                                                
-                )
-                os.makedirs(self.data_path + f"/models/communities/community={community}/", exists_ok=True)
-                np.savetxt(self.data_path + f"/models/communities/community={community}/prediction.txt", self.hierarchy[city][community])
-                pd.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), self.hierarchy[city][community])).to_csv(self.data_path+f"/models/communities/community={community}/evaluation.csv", index=False)
-            self.hierarchy[city] = np.add.reduce(self.hierarchy[city].values())
-            os.makedirs(self.data_path + f"/models/communities/city={city}/", exists_ok=True)
-            np.savetxt(self.data_path + f"/models/communities/city={city}/prediction.txt", self.hierarchy[city])
-            pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/communities/city={city}/evaluation.csv", index=False)
+        with Manager() as manager:
+            semaphore = Semaphore(MAX_PARALLEL_TRAINING_MODELS)
+            processes = []
+            for city, communities in self.hierarchy.items():
+                result_dict = manager.dict()
+                for community, model in communities.items():
+                    process = Process(target=predict,
+                                      args=(get_community_ec_input,
+                                            (self.data_path, community, test_windows),
+                                            model, result_dict, community, semaphore))
+                    process.start()
+                    processes.append(process)
+                self.hierarchy[city] = result_dict
+            for process in processes:
+                process.join()
+            for city, communities in self.hierarchy.items():
+                community_predictions = []
+                for community, community_prediction in communities.items():
+                    np.savetxt(self.data_path + f"/models/communities/community={community}/prediction.txt", community_prediction)
+                    pd.DataFrame.from_dict(compute_metrics(list(get_community_ec_output(self.data_path, community, test_windows)), community_prediction)).to_csv(self.data_path+f"/models/communities/community={community}/evaluation.csv", index=False)
+                    community_predictions.append(community_prediction)
+                city_prediction = np.add.reduce(community_predictions)
+                np.savetxt(self.data_path + f"/models/communities/city={city}/prediction.txt", city_prediction)
+                pd.DataFrame.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), city_prediction)).to_csv(self.data_path+f"/models/communities/city={city}/evaluation.csv", index=False)
                     
 
 class CityAggregationLayer:
@@ -281,17 +314,23 @@ class CityAggregationLayer:
             self.hierarchy[city] = models.load_model(self.data_path + f"models/cities/city={city}/model")
                         
     def evaluate(self, test_windows : List[int]):
-        for city in self.hierarchy:
-            self.hierarchy[city] = self.hierarchy[city].predict(
-                x=tf.data.Dataset.from_generator(
-                    generator=get_city_ec_input,
-                    args=(self.data_path, city, test_windows),
-                    output_signature=tf.RaggedTensorSpec(shape=(INPUT_SIZE, 8), dtype=tf.float32)).batch(batch_size=BATCH_SIZE),
-                use_multiprocessing=True                                                                                                               
-            )
-            os.makedirs(self.data_path + f"/models/cities/city={city}/", exists_ok=True)
-            np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", self.hierarchy[city])
-            pd.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), self.hierarchy[city])).to_csv(self.data_path+f"/models/cities/city={city}/evaluation.csv", index=False)
+        with Manager() as manager:
+            semaphore = Semaphore(MAX_PARALLEL_TRAINING_MODELS)
+            processes = []
+            result_dict = manager.dict()
+            for city, model in self.hierarchy.items():
+                process = Process(target=predict,
+                                  args=(get_city_ec_input,
+                                        (self.data_path, community, test_windows),
+                                        model, result_dict, community, semaphore))
+                process.start()
+                processes.append(process)
+            self.hierarchy[city] = result_dict
+            for process in processes:
+                process.join()
+            for city, city_prediction in self.hierarchy.items():
+                np.savetxt(self.data_path + f"/models/cities/city={city}/prediction.txt", city_prediction)
+                pd.DataFrame.from_dict(compute_metrics(list(get_city_ec_output(self.data_path, city, test_windows)), city_prediction)).to_csv(self.data_path+f"/models/cities/city={city}/evaluation.csv", index=False)
 
 def learn(path, model_input, model_output, train_val_windows, full_train_windows, model_identifier, semaphore):
     # print("\n-------------------------------", f"|     Start KFold cross-validation for '{path}'...   |", "--------------------------------\n", flush=True)
@@ -339,3 +378,12 @@ def run_fold(train_args, val_args, path, model_input, model_output, fold, semaph
             callbacks=[tf.keras.callbacks.CSVLogger(path + f"history_log_fold_{fold}.csv", separator=",")],
             max_queue_size=5
         )
+
+def predict(generator, generator_args, model, result_dict, key, semaphore):
+    with semaphore:
+        result_dict[key] = model.predict(x=tf.data.Dataset.from_generator(generator=generator,
+                                                                          args=generator_args,
+                                                                          output_signature=tf.TensorSpec(shape=(INPUT_SIZE, 8),
+                                                                                                         dtype=tf.float32))
+                                                          .batch(batch_size=BATCH_SIZE),
+                                         use_multiprocessing=True)

@@ -55,7 +55,7 @@ if __name__ == '__main__':
     
     print("\n-------------------------------", f"|     Start testing appliances...    |", "--------------------------------\n")
     # Make appliance predictions and aggregate them to all levels above while recording predictions and metrics
-    appl_agg_layer = models.ApplianceAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    appl_agg_layer = models.ApplianceAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA))
     appl_agg_layer.from_disk()
     appl_agg_layer.evaluate(test_windows=test_windows)
     print("\n-------------------------------", f"|     Done testing appliances!    |", "--------------------------------\n")
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     print("\n-------------------------------", f"|     Start testing households...    |", "--------------------------------\n")
     # Make household predictions and aggregate them to all levels above while recording predictions and metrics
-    house_agg_layer = models.HouseholdAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    house_agg_layer = models.HouseholdAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA))
     house_agg_layer.from_disk()
     house_agg_layer.evaluate(test_windows=test_windows)
 
@@ -99,12 +99,12 @@ if __name__ == '__main__':
     for community in communities:
         community.join()
         
-    print("\n-------------------------------", f"|     Done training communities!    |", "--------------------------------\n")
+    # print("\n-------------------------------", f"|     Done training communities!    |", "--------------------------------\n")
 
     print("\n-------------------------------", f"|     Start testing communities...    |", "--------------------------------\n")
 
     # Make community predictions and aggregate them to all levels above while recording predictions and metrics
-    comm_agg_layer = models.CommunityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    comm_agg_layer = models.CommunityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA))
     comm_agg_layer.from_disk()
     comm_agg_layer.evaluate(test_windows=test_windows)
     
@@ -129,7 +129,7 @@ if __name__ == '__main__':
     print("\n-------------------------------", f"|     Start testing cities...    |", "--------------------------------\n")
 
     # Make city predictions and aggregate them to all levels above while recording predictions and metrics
-    city_agg_layer = models.CityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA), data_path=SAVE_DIR)
+    city_agg_layer = models.CityAggregationLayer(data_utils.get_hierarchy_dict(metadata_files=CUSTOM_METADATA))
     city_agg_layer.from_disk()
     city_agg_layer.evaluate(test_windows=test_windows)
     
