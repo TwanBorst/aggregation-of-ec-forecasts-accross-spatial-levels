@@ -99,7 +99,7 @@ if __name__ == '__main__':
     for community in communities:
         community.join()
         
-    # print("\n-------------------------------", f"|     Done training communities!    |", "--------------------------------\n")
+    print("\n-------------------------------", f"|     Done training communities!    |", "--------------------------------\n")
 
     print("\n-------------------------------", f"|     Start testing communities...    |", "--------------------------------\n")
 
