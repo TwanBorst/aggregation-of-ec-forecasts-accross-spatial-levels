@@ -134,7 +134,3 @@ if __name__ == '__main__':
     city_agg_layer.evaluate(test_windows=test_windows)
     
     print("\n-------------------------------", f"|     Done testing cities!    |", "--------------------------------\n")
-                
-        
-        
-

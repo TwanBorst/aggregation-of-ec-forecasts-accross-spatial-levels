@@ -327,11 +327,11 @@ class CityAggregationLayer:
             for city, model in self.hierarchy.items():
                 process = Process(target=predict,
                                   args=(get_city_ec_input,
-                                        (self.data_path, community, test_windows),
-                                        model, result_dict, community, semaphore))
+                                        (self.data_path, city, test_windows),
+                                        model, result_dict, city, semaphore))
                 process.start()
                 processes.append(process)
-            self.hierarchy[city] = result_dict
+            self.hierarchy = result_dict
             for process in processes:
                 process.join()
             for city, city_prediction in self.hierarchy.items():
