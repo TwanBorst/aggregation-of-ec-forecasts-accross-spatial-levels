@@ -1,16 +1,19 @@
+from copy import deepcopy
+from math import floor
 from typing import List
+
+import dask.dataframe as dd
 import numpy as np
 import pandas as pd
-import dask.dataframe as dd
-from constants import *
-from math import floor
 import pyarrow as pa
-from copy import deepcopy
+
+from constants import *
+from misc import Singleton
 
 pd.options.display.max_rows = 100
 
-class data_utils_class:
-        
+class data_utils_class(meta_class=Singleton):
+
     def __init__(self, time_column_name : str = 'localminute', time_frequency : str = 'S', metadata_time_prefix : str = 'egauge_1s_') -> None:
         r"""
         Data utils class.
@@ -66,12 +69,12 @@ class data_utils_class:
             List of sensors that will be in the final result. If the value is `None` all sensors are included.
         """
         sensors_excluding_grid = sensors if sensors is not None else self.sensors_excluding_grid
-        collumns = ['dataid', self.time_column_name] + sensors_excluding_grid
+        columns = ['dataid', self.time_column_name] + sensors_excluding_grid
         data_dtype = {sensor : float for sensor in sensors_excluding_grid}
         data_dtype['dataid'] = int
         data_dtype[self.time_column_name] = object
         
-        ddf : dd.DataFrame = dd.read_csv(files, dtype = data_dtype, blocksize=10e7, usecols=collumns)
+        ddf : dd.DataFrame = dd.read_csv(files, dtype = data_dtype, blocksize=10e7, usecols=columns)
         original_metadata : dd.DataFrame = dd.read_csv(metadata_files, dtype = self.metadata_dtype, blocksize=10e7, usecols=['dataid', 'state', 'delta_year'])
         original_metadata['delta_year'] = dd.to_timedelta(original_metadata['delta_year'])
         
@@ -170,13 +173,13 @@ class data_utils_class:
                                     agg=lambda x: x.aggregate(lambda x: x.any()),
                                     finalize=lambda x: x.replace({True: "yes", False: ""}))
 
-        collumns = ['dataid', self.time_column_name] + SENSOR_NAMES
+        columns = ['dataid', self.time_column_name] + SENSOR_NAMES
         
-        ddf : dd.DataFrame = dd.read_csv(data_path, dtype = self.data_dtype, blocksize=10e7, usecols=collumns)
+        ddf : dd.DataFrame = dd.read_csv(data_path, dtype = self.data_dtype, blocksize=10e7, usecols=columns)
         
-        reorder_collumns = list(ddf.columns)
-        reorder_collumns.insert(1, 'aggregation_abs_error')
-        ddf = ddf.assign(aggregation_abs_error=(ddf[[x for x in SENSOR_NAMES if x not in ["grid", "solar", "solar2", "battery1"]]].sum(axis=1) - ddf[["solar", "solar2", "battery1", "grid"]].sum(axis=1)).abs().where(cond=ddf["grid"].notnull(), other=np.nan))[reorder_collumns]
+        reorder_columns = list(ddf.columns)
+        reorder_columns.insert(1, 'aggregation_abs_error')
+        ddf = ddf.assign(aggregation_abs_error=(ddf[[x for x in SENSOR_NAMES if x not in ["grid", "solar", "solar2", "battery1"]]].sum(axis=1) - ddf[["solar", "solar2", "battery1", "grid"]].sum(axis=1)).abs().where(cond=ddf["grid"].notnull(), other=np.nan))[reorder_columns]
 
         agg_dict = {self.time_column_name: {self.metadata_time_prefix + 'min_time': 'min', self.metadata_time_prefix + 'max_time': 'max', self.metadata_time_prefix + 'data_availability': 'count'}, 'aggregation_abs_error': {'aggregation_abs_error_max' : 'max', 'aggregation_abs_error_mean': 'mean'}}
         agg_dict.update({sensor: {sensor: all_present} for sensor in SENSOR_NAMES})
@@ -351,3 +354,62 @@ class data_utils_class:
                             self.hierarchy[city][community][household][appliance] = None
                         
         return deepcopy(self.hierarchy)
+
+
+# Generators for model input and expected output
+################################################################################################################
+
+def get_appliance_ec_input(data_path: str, dataid: int, sensor: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(sensor) == bytes:
+        sensor = sensor.decode('utf-8')
+    return get_data(data_path+"/normalized/final_appliance/dataid="+str(dataid), columns=[sensor] + FEATURE_COLUMNS)
+
+def get_appliance_ec_output(data_path: str, dataid: int, sensor: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(sensor) == bytes:
+        sensor = sensor.decode('utf-8')
+    return get_data(data_path+"/final_appliance/dataid="+str(dataid), columns=[sensor])
+        
+def get_household_ec_input(data_path: str, dataid: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    return get_data(data_path+"/normalized/final_household/dataid="+str(dataid), columns=['total'] + FEATURE_COLUMNS)
+
+def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    return get_data(data_path+"/final_household/dataid="+str(dataid), columns=['total'])
+        
+def get_community_ec_input(data_path: str, community: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    return get_data(data_path+"/normalized/final_community/community="+str(community), columns=['total'] + FEATURE_COLUMNS)
+
+def get_community_ec_output(data_path: str, community: int, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    return get_data(data_path+"/final_community/community="+str(community), columns=['total'])
+
+def get_city_ec_input(data_path: str, city: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(city) == bytes:
+        city = city.decode('utf-8')
+    return get_data(data_path+"/normalized/final_city/city="+city, columns=['total'] + FEATURE_COLUMNS)
+
+def get_city_ec_output(data_path: str, city: str, windows: List[int]):
+    if type(data_path) == bytes:
+        data_path = data_path.decode('utf-8')
+    if type(city) == bytes:
+        city = city.decode('utf-8')
+    return get_data(data_path+"/final_city/city="+city, ['total'])
+        
+def get_data(path, columns, windows):
+    ddf : dd.DataFrame = dd.read_parquet(path, columns=['index'] + columns)
+    for window in windows:
+        indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)][columns].compute().to_numpy(dtype=np.float64)
+        yield np_array
