@@ -1,92 +1,177 @@
-# flexibily_aggregation_smart_grids
+# seq2point-nilm
+**Sequence-to-point (seq2point) learning for non-intrusive load monitoring (NILM)**
+
+Seq2point learning is a generic and as well as simple framework for NILM [1-2]. It learns a mapping from the mains window Y to the midpoint x of the curresponding appliance. From probabilistic perspective, seq2point learns a condistional distribution p(x|Y) (see details in [2]).
+
+Similarly, the seq2seq learning proposed in [2] learns a mapping from sequence to sequence which could be seen as an extension of seq2point.
+
+Note that seq2point learning is a framework and so you can choose any architectures including CNN, RNN and AutoEncoders if you are employing deep neural networks. Indeed, you can also choose logistic regression, SVM, and Gaussian Process regression models because all these models are instances for representing a mapping.
+
+This code is written by Mingjun Zhong adapted from Michele D'Incecco and Jack Barber:
+
+https://github.com/MingjunZhong/transferNILM.
+
+https://github.com/JackBarber98/pruned-nilm.
+ 
+
+References:
+
+[1] DIncecco, Michele, Stefano Squartini, and Mingjun Zhong. "Transfer Learning for Non-Intrusive Load Monitoring." arXiv preprint arXiv:1902.08835 (2019).
+
+[2] Chaoyun Zhang, Mingjun Zhong, Zongzuo Wang, Nigel Goddard, and Charles Sutton. "Sequence-to-point learning with neural networks for nonintrusive load monitoring."
+Thirty-Second AAAI Conference on Artificial Intelligence (AAAI-18), Feb. 2-7, 2018.
+
+Seq2point model: the input is the mains windows (599 timepoints); and output is the midpoint of the corresponding appliance windows. Note that you can choose other sizes of the inpurt window, for example, 299, 399, etc.
+
+![](images/s2p.png)
 
 
+**Requirements**
 
-## Getting started
+0. This software was tested on Ubuntu 16.04 LTS
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+1. Create your virtual environment Python 3.5-3.8
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+2. Install Tensorflow = 2.0.0
 
-## Add your files
+    * Follow official instruction on https://www.tensorflow.org/install/
+    
+    * Remember a GPU support is highly recommended for training
+    
+3. Install Keras > 2.1.5 (Tested on Keras 2.3.1)
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+    * Follow official instruction on https://keras.io/
+    
+4. Clone this repository
+    
+
+For instance, the environments we used are listed in the file `environment.yml` - 
+you could find all the packages there. If you use `conda`, 
+you may type `conda env create -f environment.yml` to set up the environment.
+    
+
+# How to use the code and examples
+With this project you will be able to use the Sequence to Point network. You can prepare the dataset from the
+most common in NILM, train the network and test it. Target appliances taken into account are kettle, microwave, fridge, dish washer and
+washing machine.
+Directory tree:
+
+``` bash
+seq2point-nilm/
+├── appliance_data.py
+├── data_feeder.py
+├── dataset_management/
+│   ├── functions.py
+│   ├── redd/
+│   │   ├── create_trainset_redd.py
+│   │   ├── house_plot.py
+│   │   ├── redd_create_tes-set.py
+│   │   ├── redd_parameters.py
+│   │   └── redd_raw_plot.py
+│   ├── refit/
+│   │   ├── create_dataset.py
+│   │   ├── dataset_infos.py
+│   │   ├── dataset_plot.py
+│   │   ├── excelExporter.py
+│   │   ├── merge_fridges.py
+│   │   └── raw_house_data_plot.py
+│   └── ukdale/
+│       ├── create_test_set.py
+│       ├── create_trainset_ukdale.py
+│       ├── excelExporterUK.py
+│       ├── house_data_plot.py
+│       ├── import_ext.py
+│       ├── testset_plot.py
+│       └── ukdale_parameters.py
+├── environment.yml
+├── images/
+│   ├── model.png
+│   ├── s2p.png
+│   └── washingmachine.png
+├── model.png
+├── model_structure.py
+├── README.md
+├── remove_space.py
+├── saved_models/
+├── seq2point_test.py
+├── seq2point_train.py
+├── test_main.py
+└── train_main.py
+```
+
+## **Create REFIT, UK-DALE or REDD dataset**
+
+This script allows the user to create CSV files of training dataset of power measurments.
+The output will be 3 CSV files for training, validation and test. 
+
+You should select the following arguments for the argument parser:
+`python create_dataset -h`
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.tudelft.nl/lcavalcantesie/flexibily_aggregation_smart_grids.git
-git branch -M main
-git push -uf origin main
+--data_dir DATA_DIR             The directory containing the CLEAN REFIT data
+
+--appliance_name APPLIANCE_NAME which appliance you want to train: kettle,
+                                microwave,fridge,dishwasher,washingmachine
+
+--aggregate_mean AGGREGATE_MEAN Mean value of aggregated reading (mains)
+
+--aggregate_std AGGREGATE_STD   Std value of aggregated reading (mains)
+
+`--save_path SAVE_PATH           The directory to store the training data
 ```
 
-## Integrate with your tools
 
-- [ ] [Set up project integrations](https://gitlab.tudelft.nl/lcavalcantesie/flexibily_aggregation_smart_grids/-/settings/integrations)
+Example:
 
-## Collaborate with your team
+Create a REFIT dataset (mains and appliance power measurments) for kettle:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+`python create_dataset.py --data_dir './' --appliance_name 'kettle' --aggregate_mean 522 --aggregate_std 814 --save_path './'`
+    
+### **REFIT**
 
-## Test and Deploy
+Download the REFIT raw data from the original website (https://pureportal.strath.ac.uk/en/datasets/refit-electrical-load-measurements-cleaned). 
+Appliances and training set composition for this project:
 
-Use the built-in continuous integration in GitLab.
+| Appliances      |      training                    |  validation | test   |
+|-----------------|:--------------------------------:|:-----------:|:------:|
+| kettle          | 3, 4, 6, 7, 8, 9, 12, 13, 19, 20 |     5       |   2    |
+| microwave       | 10, 12, 19                       |    17       |   4    |
+| fridge          | 2, 5, 9                          |     12      |   15   |
+| dish washer     | 5, 7, 9, 13, 16                  |     18      |   20   |
+| washing machine | 2, 5, 7, 9, 15, 16, 17           |      18     |   8    |
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
 
-***
+### **UK-DALE**
 
-# Editing this README
+Download the UK-DALE raw data from the original website (http://jack-kelly.com/data/). 
+Validation is a 13% slice from the final training building. 
+Appliances and training set composition for this project:
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+| Appliances      |      training   |  validation | test   |
+|-----------------|:---------------:|:-----------:|:------:|
+| kettle          | 1               |     1       |   2    |
+| microwave       | 1               |     1       |   2    |
+| fridge          | 1               |     1       |   2    |
+| dishwasher      | 1               |     1       |   2    |
+| washingmachine  | 1               |     1       |   2    |
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
 
-## Name
-Choose a self-explaining name for your project.
+### **REDD**
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+Download the REDD raw data from the original website (http://redd.csail.mit.edu/).
+Validation is a 10% slice from the final training building. 
+Appliances and training set composition for this project:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+| Appliances      |      training   |  validation | test   |
+|-----------------|:---------------:|:-----------:|:------:|
+| microwave       | 2,3             |     3       |   1    |
+| fridge          | 2,3             |     3       |   1    |
+| dishwasher      | 2,3             |     3       |   1    |
+| washingmachine  | 2,3             |     3       |   1    |
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+**I will write instructions how to use the code with more details. Currently, you just run train_main.py and test_main.py. Do remember to choose your parameters in these two files correspondingly.**
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+To train the modoel, just run `python train_main.py` or in IDE environment, e.g., Spyder, run train_main.py
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+Any questions, please write email to me: mingjun.zhong@abdn.ac.uk
