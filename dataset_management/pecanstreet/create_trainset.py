@@ -252,8 +252,7 @@ def main():
 
     # Creates a dataframe containing the total consumption at a given time by one house.
     household = data[['dataid', TIME_COLUMN_NAME]].assign(
-        total=data[[x for x in SENSOR_NAMES if x not in ["solar", "solar2", "battery1", "grid"]]].sum(axis=1) - data[
-            ["solar", "solar2", "battery1"]].sum(axis=1))
+        total=data[[x for x in SENSOR_NAMES if x not in ["solar", "solar2", "battery1", "grid"]]].sum(axis=1))
 
     del data                                                            # Deletes a no longer needed dataframe
 
@@ -327,8 +326,6 @@ def main():
     print("\n----------------------------", f"|    Normalizing communities     |", "----------------------------\n")
 
     data = dd.read_parquet(SAVE_PATH + "final_community/")              # Reads the data from a community
-
-    data.to_csv("test.csv", single_file=True)
 
     mean = data["total"].mean()                                         # The mean value of the community
     std = data["total"].std()                                           # The standard deviation of the community
