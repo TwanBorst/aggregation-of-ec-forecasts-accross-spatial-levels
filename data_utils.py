@@ -8,11 +8,10 @@ import pandas as pd
 import pyarrow as pa
 
 from constants import *
-from misc import Singleton
 
 pd.options.display.max_rows = 100
 
-class data_utils_class(meta_class=Singleton):
+class data_utils_class():
 
     def __init__(self, time_column_name : str = 'localminute', time_frequency : str = 'S', metadata_time_prefix : str = 'egauge_1s_') -> None:
         r"""
@@ -364,52 +363,77 @@ def get_appliance_ec_input(data_path: str, dataid: int, sensor: str, windows: Li
         data_path = data_path.decode('utf-8')
     if type(sensor) == bytes:
         sensor = sensor.decode('utf-8')
-    return get_data(data_path+"/normalized/final_appliance/dataid="+str(dataid), columns=[sensor] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_appliance/dataid="+str(dataid), columns=[sensor, 'index'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window, window + INPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)][[sensor] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
+        yield np_array
 
 def get_appliance_ec_output(data_path: str, dataid: int, sensor: str, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
     if type(sensor) == bytes:
         sensor = sensor.decode('utf-8')
-    return get_data(data_path+"/final_appliance/dataid="+str(dataid), columns=[sensor])
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_appliance/dataid="+str(dataid), columns=[sensor, 'index'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)][sensor].compute().to_numpy(dtype=np.float64)
+        yield np_array
         
 def get_household_ec_input(data_path: str, dataid: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    return get_data(data_path+"/normalized/final_household/dataid="+str(dataid), columns=['total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_household/dataid="+str(dataid), columns=['index', 'total'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window, window + INPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
+        yield np_array
 
 def get_household_ec_output(data_path: str, dataid: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    return get_data(data_path+"/final_household/dataid="+str(dataid), columns=['total'])
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_household/dataid="+str(dataid), columns=['index', 'total'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)]['total'].compute().to_numpy(dtype=np.float64)
+        yield np_array
         
 def get_community_ec_input(data_path: str, community: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    return get_data(data_path+"/normalized/final_community/community="+str(community), columns=['total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_community/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window, window + INPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
+        yield np_array
 
 def get_community_ec_output(data_path: str, community: int, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
-    return get_data(data_path+"/final_community/community="+str(community), columns=['total'])
-
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_community/community="+str(community), columns=['index', 'total'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)]['total'].compute().to_numpy(dtype=np.float64)
+        yield np_array
+        
 def get_city_ec_input(data_path: str, city: str, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
     if type(city) == bytes:
         city = city.decode('utf-8')
-    return get_data(data_path+"/normalized/final_city/city="+city, columns=['total'] + FEATURE_COLUMNS)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/normalized/final_city/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
+    for window in windows:
+        indexes = [*range(window, window + INPUT_SIZE)]
+        np_array = ddf[ddf['index'].isin(indexes)][['total'] + FEATURE_COLUMNS].compute().to_numpy(dtype=np.float64)
+        yield np_array
 
 def get_city_ec_output(data_path: str, city: str, windows: List[int]):
     if type(data_path) == bytes:
         data_path = data_path.decode('utf-8')
     if type(city) == bytes:
         city = city.decode('utf-8')
-    return get_data(data_path+"/final_city/city="+city, ['total'])
-        
-def get_data(path, columns, windows):
-    ddf : dd.DataFrame = dd.read_parquet(path, columns=['index'] + columns)
+    ddf : dd.DataFrame = dd.read_parquet(data_path+"/final_city/city="+city, columns=['index', 'total'] + FEATURE_COLUMNS)
     for window in windows:
         indexes = [*range(window + INPUT_SIZE, window + INPUT_SIZE + OUTPUT_SIZE)]
-        np_array = ddf[ddf['index'].isin(indexes)][columns].compute().to_numpy(dtype=np.float64)
+        np_array = ddf[ddf['index'].isin(indexes)]['total'].compute().to_numpy(dtype=np.float64)
         yield np_array

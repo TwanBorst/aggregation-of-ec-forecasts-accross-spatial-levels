@@ -14,15 +14,16 @@ TIME_FREQUENCY = "15min"
 # KFold and test fraction configuration for splitting the data
 FOLDS = 3
 TEST_FRACTION = 0.2
+VAL_FRACTION = 0.2
 BATCH_SIZE = 64
-MAX_PARALLEL_TRAINING_MODELS = 5
+MAX_PARALLEL_TRAINING_MODELS = 8
 EPOCHS = 25
 
 # File and folder paths
 ORIGINAL_METADATA = './data/metadata.csv'
 CUSTOM_METADATA = './data/generated/metadata_15min.csv'
 DATA_GLOB = './data/15minute_data*/15minute_data*.csv'
-SAVE_DIR = './data/15min/'      # A lot of data can be stored in this folder depending on the time frequency and size of the data!
+SAVE_DIR = './data/generated/'      # A lot of data can be stored in this folder depending on the time frequency and size of the data!
 DASK_TMP_DIR = './tmp'             # Dask will use this folder when it runs out of memory or when a shuffle needs to take place. A lot of data can temporarily be stored in this folder!
 
 
@@ -38,3 +39,4 @@ SENSOR_NAMES = ["air1", "air2", "air3", "airwindowunit1", "aquarium1", "bathroom
                 "microwave1", "office1", "outsidelights_plugs1", "outsidelights_plugs2", "oven1", "oven2", "pool1", "pool2", "poollight1", "poolpump1", "pump1", "range1",
                 "refrigerator1", "refrigerator2", "security1", "sewerpump1", "shed1", "solar", "solar2", "sprinkler1", "sumppump1", "utilityroom1", "venthood1", "waterheater1",
                 "waterheater2", "wellpump1", "winecooler1"]
+GENERATING_SENSOR_NAMES = ["solar", "solar2", "battery1"]
